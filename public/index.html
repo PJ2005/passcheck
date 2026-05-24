@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PassCheck FIU - API Tester</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--bg-color), #020617);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            padding: 1.5rem 2rem;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            background: linear-gradient(to right, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-badge::before {
+            content: '';
+            display: block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        main {
+            display: flex;
+            flex: 1;
+            padding: 2rem;
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .panel:hover {
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .sidebar {
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .editor {
+            flex: 2;
+        }
+
+        .response {
+            flex: 2;
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 1.125rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .endpoint-btn {
+            display: block;
+            width: 100%;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 0.5rem;
+            color: var(--text-main);
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .endpoint-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.1);
+            transform: translateX(4px);
+        }
+
+        .endpoint-btn.active {
+            background: rgba(59, 130, 246, 0.15);
+            border-color: var(--accent);
+            border-left: 4px solid var(--accent);
+        }
+
+        .method {
+            font-size: 0.75rem;
+            font-weight: bold;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            margin-right: 0.5rem;
+        }
+
+        .method.post { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .method.get { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            color: var(--text-main);
+            font-family: monospace;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-group input:focus {
+            border-color: var(--accent);
+        }
+
+        textarea {
+            width: 100%;
+            flex: 1;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            color: #a78bfa;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.875rem;
+            resize: none;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 1rem;
+        }
+
+        textarea:focus {
+            border-color: var(--accent);
+        }
+
+        button.send-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-family: inherit;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        button.send-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        button.send-btn:active {
+            transform: scale(0.98);
+        }
+
+        .response-viewer {
+            flex: 1;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            overflow-y: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.875rem;
+            color: #34d399;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .response-status {
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Loading animation */
+        .loader {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>PassCheck API Tester</h1>
+        <div class="status-badge" id="health-status">Backend Online</div>
+    </header>
+
+    <main>
+        <div class="panel sidebar">
+            <h2>Endpoints</h2>
+            
+            <button class="endpoint-btn active" onclick="loadEndpoint('pan')">
+                <span class="method post">POST</span> /api/v1/onboard/pan
+            </button>
+            <button class="endpoint-btn" onclick="loadEndpoint('gst')">
+                <span class="method post">POST</span> /api/v1/onboard/gst
+            </button>
+            <button class="endpoint-btn" onclick="loadEndpoint('bank')">
+                <span class="method post">POST</span> /api/v1/onboard/bank
+            </button>
+            <button class="endpoint-btn" onclick="loadEndpoint('health')">
+                <span class="method get">GET</span> /api/v1/health
+            </button>
+            <button class="endpoint-btn" onclick="loadEndpoint('consent_initiate')">
+                <span class="method post">POST</span> /api/v1/consent/initiate
+            </button>
+            <button class="endpoint-btn" onclick="loadEndpoint('consent_status')">
+                <span class="method get">GET</span> /api/v1/consent/status/:merchantId
+            </button>
+            <button class="endpoint-btn" onclick="loadEndpoint('debug_token')">
+                <span class="method post">POST</span> /api/v1/debug/setu-token
+            </button>
+        </div>
+
+        <div class="panel editor">
+            <h2>Request Builder</h2>
+            <div class="input-group">
+                <label>Target URL</label>
+                <input type="text" id="url-input" value="/api/v1/onboard/pan">
+            </div>
+            <div class="input-group">
+                <label>JSON Body</label>
+                <textarea id="request-body" rows="15">{
+  "phone_number": "9999999999",
+  "pan": "ABCDE1234A"
+}</textarea>
+            </div>
+            <button class="send-btn" onclick="sendRequest()">
+                <span>Send Request</span>
+                <div class="loader" id="loader"></div>
+            </button>
+        </div>
+
+        <div class="panel response">
+            <h2>Response Viewer</h2>
+            <div class="response-status">
+                <span id="res-code">Awaiting request...</span>
+                <span id="res-time"></span>
+            </div>
+            <div class="response-viewer" id="response-body">
+// Server response will appear here
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const endpoints = {
+            pan: { url: '/api/v1/onboard/pan', method: 'POST', body: '{\n  "phone_number": "9999999999",\n  "pan": "ABCDE1234A"\n}' },
+            gst: { url: '/api/v1/onboard/gst', method: 'POST', body: '{\n  "merchant_id": "REPLACE_WITH_UUID_FROM_PAN_API",\n  "gstin": "29ABCDE1234F2Z5"\n}' },
+            bank: { url: '/api/v1/onboard/bank', method: 'POST', body: '{\n  "merchant_id": "REPLACE_WITH_UUID_FROM_PAN_API"\n}' },
+            health: { url: '/api/v1/health', method: 'GET', body: '' },
+            consent_initiate: { url: '/api/v1/consent/initiate', method: 'POST', body: '{\n  "merchant_id": "REPLACE_WITH_UUID_FROM_PAN_API",\n  "vua": "9999999999@onemoney",\n  "from_date": "2023-01-01T00:00:00Z",\n  "to_date": "2023-12-31T23:59:59Z"\n}' },
+            consent_status: { url: '/api/v1/consent/status/REPLACE_WITH_MERCHANT_ID', method: 'GET', body: '' },
+            debug_token: { url: '/api/v1/debug/setu-token', method: 'POST', body: '{}' }
+        };
+
+        let currentMethod = 'POST';
+
+        function loadEndpoint(id) {
+            document.querySelectorAll('.endpoint-btn').forEach(btn => btn.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            const ep = endpoints[id];
+            document.getElementById('url-input').value = ep.url;
+            document.getElementById('request-body').value = ep.body;
+            currentMethod = ep.method;
+            
+            // Disable body input for GET requests
+            document.getElementById('request-body').disabled = ep.method === 'GET';
+        }
+
+        async function sendRequest() {
+            const url = document.getElementById('url-input').value;
+            const bodyContent = document.getElementById('request-body').value;
+            const resViewer = document.getElementById('response-body');
+            const resCode = document.getElementById('res-code');
+            const resTime = document.getElementById('res-time');
+            const loader = document.getElementById('loader');
+            const btnText = document.querySelector('.send-btn span');
+
+            // UI State loading
+            loader.style.display = 'block';
+            btnText.style.display = 'none';
+            resViewer.textContent = "Processing...";
+            resCode.textContent = "Sending...";
+            resTime.textContent = "";
+
+            const startTime = performance.now();
+
+            try {
+                let options = {
+                    method: currentMethod,
+                    headers: { 'Content-Type': 'application/json' }
+                };
+
+                if (currentMethod !== 'GET' && bodyContent.trim() !== '') {
+                    options.body = bodyContent;
+                }
+
+                const response = await fetch(url, options);
+                const endTime = performance.now();
+                const timeTaken = (endTime - startTime).toFixed(2);
+                
+                const data = await response.json();
+
+                resCode.textContent = `Status: ${response.status} ${response.statusText}`;
+                resCode.style.color = response.ok ? 'var(--success)' : 'var(--error)';
+                resTime.textContent = `${timeTaken} ms`;
+                
+                resViewer.textContent = JSON.stringify(data, null, 2);
+                resViewer.style.color = response.ok ? '#34d399' : '#f87171';
+
+            } catch (error) {
+                resCode.textContent = "Error";
+                resCode.style.color = 'var(--error)';
+                resViewer.textContent = error.toString();
+                resViewer.style.color = '#f87171';
+            } finally {
+                loader.style.display = 'none';
+                btnText.style.display = 'block';
+            }
+        }
+
+        // Initial check health
+        fetch('/api/v1/health')
+            .then(r => {
+                if(!r.ok) throw new Error("Offline");
+                document.getElementById('health-status').textContent = 'Backend Online';
+                document.getElementById('health-status').style.color = 'var(--success)';
+            })
+            .catch(() => {
+                document.getElementById('health-status').textContent = 'Backend Offline';
+                document.getElementById('health-status').style.color = 'var(--error)';
+            });
+    </script>
+</body>
+</html>

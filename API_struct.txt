@@ -1,0 +1,353 @@
+Get token
+
+https://orgservice-prod.setu.co/v1/users/login
+
+Header parameters
+
+client
+
+string
+Required
+
+bridge
+
+Body
+{
+	"clientID": "7ae0553f-f10f-475d-88ea-4a5f94ff3723",
+	"grant_type": "client_credentials",
+	"secret": "1qfpRYp0pgQFuRUhrsIOvBj6vku15Yc2"
+}
+
+-------------------------------------------------------------
+Create consent
+
+https://fiu-sandbox.setu.co/v2/consents
+
+Header parameters
+
+Authorization
+
+string
+Required
+
+Bearer AUTH_TOKEN
+x-product-instance-id
+
+string
+Required
+
+b6d7a54a-6150-4fe7-a556-d37763720bcd
+
+Body
+{
+	"consentDuration": {
+		"unit": "MONTH",
+		"value": "24"
+	},
+	"vua": "9999999999@onemoney",
+	"dataRange": {
+		"from": "2023-01-01T00:00:00Z",
+		"to": "2025-01-24T00:00:00Z"
+	},
+	"consentTypes": [
+		"PROFILE",
+		"SUMMARY",
+		"TRANSACTIONS"
+	],
+	"context": []
+}
+
+-------------------------------------------------------------
+Get a consent
+
+https://fiu-sandbox.setu.co/v2/consents/{request_id}
+
+Query parameters
+
+expanded
+
+boolean
+true
+Header parameters
+
+Authorization
+
+string
+Required
+
+Bearer AUTH_TOKEN
+x-product-instance-id
+
+string
+Required
+
+b6d7a54a-6150-4fe7-a556-d37763720bcd
+-------------------------------------------------------------------
+Revoke a consent
+
+https://fiu-sandbox.setu.co/v2/consents/{request_id}/revoke
+
+Header parameters
+
+Authorization
+
+string
+Required
+
+placeholder
+x-product-instance-id
+
+string
+Required
+
+---------------------------------------------------------------------
+Create FI data fetch
+
+https://fiu-sandbox.setu.co/v2/sessions
+
+Header parameters
+
+Authorization
+
+string
+Required
+
+Bearer AUTH_TOKEN
+x-product-instance-id
+
+string
+Required
+
+b6d7a54a-6150-4fe7-a556-d37763720bcd
+
+Body
+{
+	"DataRange": {
+		"from": "2019-08-24T14:15:22Z",
+		"to": "2019-08-24T14:15:22Z"
+	},
+	"consentId": "e521cf62-a45f-49c5-8372-94853fffeb55",
+	"format": "json"
+}
+-----------------------------------------------------------------------
+Data fetch for custom range
+
+https://fiu-sandbox.setu.co/v2/sessions/refresh/{consent_id}
+
+Path parameters
+
+consent_id
+
+string
+Required
+
+
+Body
+dataRange
+
+object
+Required
+
+from
+
+string<date-time>
+Required
+
+placeholder
+to
+
+string<date-time>
+Required
+
+-----------------------------------------------------------------------
+
+Verify PAN
+
+https://dg-sandbox.setu.co/api/verify/pan
+
+Request
+Header parameters
+
+x-client-id
+
+string
+Required
+
+292c6e76-dabf-49c4-8e48-90fba2916673
+x-client-secret
+
+string
+Required
+
+7IZMe9zvoBBuBukLiCP7n4KLwSOy11oP
+x-product-instance-id
+
+string
+Required
+
+439244ff-114e-41a8-ae74-a783f160622d
+
+Body
+{
+	"pan": "ABCDE1234A",
+	"consent": "Y",
+	"reason": "Reason for verifying PAN set by the developer"
+}
+-----------------------------------------------------------------------
+Verify GST
+
+https://dg-sandbox.setu.co/api/verify/gst
+
+Request
+Header parameters
+
+x-client-id
+
+string
+Required
+
+292c6e76-dabf-49c4-8e48-90fba2916673
+x-client-secret
+
+string
+Required
+
+7IZMe9zvoBBuBukLiCP7n4KLwSOy11oP
+x-product-instance-id
+
+string
+Required
+
+69e23f7f-4f71-412e-aec6-b1da3fb77c6f
+
+Body
+{
+	"gstin": "27AAICB3918J1CT"
+}
+-----------------------------------------------------------------------
+Create RPD
+
+https://dg-sandbox.setu.co/api/verify/ban/reverse
+
+Request
+Header parameters
+
+x-client-id
+
+string
+Required
+
+292c6e76-dabf-49c4-8e48-90fba2916673
+x-client-secret
+
+string
+Required
+
+7IZMe9zvoBBuBukLiCP7n4KLwSOy11oP
+x-product-instance-id
+
+string
+Required
+
+1a0eb164-1129-46ae-b397-433f1d9ab454
+
+
+Body
+
+redirectionConfig
+
+object
+redirectUrl
+
+string<uri>
+placeholder
+timeout
+
+integer
+placeholder
+additionalData
+
+object
+key1
+
+string
+placeholder
+key2
+
+string
+-----------------------------------------------------------------------
+Mock Payment
+
+https://dg-sandbox.setu.co/api/verify/ban/reverse/mock_payment/{requestId}
+
+Request
+Path parameters
+
+requestId
+
+string
+Required
+
+requestId
+Header parameters
+
+x-client-id
+
+string
+Required
+
+292c6e76-dabf-49c4-8e48-90fba2916673
+x-client-secret
+
+string
+Required
+
+7IZMe9zvoBBuBukLiCP7n4KLwSOy11oP
+x-product-instance-id
+
+string
+Required
+
+1a0eb164-1129-46ae-b397-433f1d9ab454
+
+Body
+paymentStatus
+
+string
+
+-----------------------------------------------------------------------
+Get Details
+
+https://dg-sandbox.setu.co/api/verify/ban/reverse/{requestId}
+
+Request
+Path parameters
+
+requestId
+
+string
+Required
+
+requestId
+Header parameters
+
+x-client-id
+
+string
+Required
+
+292c6e76-dabf-49c4-8e48-90fba2916673
+x-client-secret
+
+string
+Required
+
+7IZMe9zvoBBuBukLiCP7n4KLwSOy11oP
+x-product-instance-id
+
+string
+Required
+
+1a0eb164-1129-46ae-b397-433f1d9ab454
+-----------------------------------------------------------------------
+
