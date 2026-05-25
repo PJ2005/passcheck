@@ -303,6 +303,12 @@
             <button class="endpoint-btn" onclick="loadEndpoint('consent_status')">
                 <span class="method get">GET</span> /api/v1/consent/status/:merchantId
             </button>
+            <button class="endpoint-btn" onclick="loadEndpoint('data_fetch')">
+                <span class="method post">POST</span> /api/v1/data/fetch
+            </button>
+            <button class="endpoint-btn" onclick="loadEndpoint('reconcile')">
+                <span class="method post">POST</span> /api/v1/reconcile
+            </button>
             <button class="endpoint-btn" onclick="loadEndpoint('debug_token')">
                 <span class="method post">POST</span> /api/v1/debug/setu-token
             </button>
@@ -347,6 +353,8 @@
             health: { url: '/api/v1/health', method: 'GET', body: '' },
             consent_initiate: { url: '/api/v1/consent/initiate', method: 'POST', body: '{\n  "merchant_id": "REPLACE_WITH_UUID_FROM_PAN_API",\n  "vua": "9999999999@onemoney",\n  "from_date": "2023-01-01T00:00:00Z",\n  "to_date": "2023-12-31T23:59:59Z"\n}' },
             consent_status: { url: '/api/v1/consent/status/REPLACE_WITH_MERCHANT_ID', method: 'GET', body: '' },
+            data_fetch: { url: '/api/v1/data/fetch', method: 'POST', body: '{\n  "merchant_id": "REPLACE_WITH_UUID_FROM_PAN_API"\n}' },
+            reconcile: { url: '/api/v1/reconcile', method: 'POST', body: '{\n  "merchant_id": "REPLACE_WITH_UUID_FROM_PAN_API"\n}' },
             debug_token: { url: '/api/v1/debug/setu-token', method: 'POST', body: '{}' }
         };
 

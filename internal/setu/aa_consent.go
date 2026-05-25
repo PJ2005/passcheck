@@ -33,6 +33,10 @@ func (c *SetuClient) InitiateConsent(merchantID string, vua string, fromDate str
 		"vua":          vua,
 		"consentMode":  "STORE",
 		"fetchType":    "PERIODIC",
+		"frequency": map[string]interface{}{
+			"unit":  "DAY",
+			"value": 100,
+		},
 		"consentTypes": []string{"TRANSACTIONS", "PROFILE"},
 		"fiTypes":      []string{"DEPOSIT"},
 		"dataLife": map[string]interface{}{

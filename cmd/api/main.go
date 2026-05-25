@@ -9,7 +9,10 @@ import (
 	"syscall"
 	"time"
 
+	"passcheck/internal/cron"
 	"passcheck/internal/database"
+	"passcheck/internal/demo"
+	"passcheck/internal/reconciliation"
 	"passcheck/internal/setu"
 	"passcheck/internal/webhooks"
 
@@ -55,8 +58,9 @@ func main() {
 	app.Use(recover.New())
 	app.Use(logger.New())
 
-	// Serve the UI Frontend
+	// Serve static files
 	app.Static("/", "./public")
+	app.Static("/demo", "./public/demo.html")
 
 	// 5. Expose routes
 	app.Get("/api/v1/health", func(c *fiber.Ctx) error {
@@ -270,6 +274,150 @@ func main() {
 			"consent_id": consentID,
 		})
 	})
+	dataGroup := app.Group("/api/v1/data")
+	dataGroup.Post("/fetch", func(c *fiber.Ctx) error {
+		type DataFetchRequest struct {
+			MerchantID string `json:"merchant_id"`
+		}
+
+		var req DataFetchRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		var internalConsentID string
+		var setuConsentID *string
+		var validFrom, validUntil time.Time
+		err := db.Pool.QueryRow(ctx, `
+			SELECT id, setu_consent_id, valid_from, valid_until FROM aa_consents
+			WHERE merchant_id = $1 AND status = 'ACTIVE'
+			ORDER BY created_at DESC LIMIT 1
+		`, req.MerchantID).Scan(&internalConsentID, &setuConsentID, &validFrom, &validUntil)
+
+		if err != nil {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "no active consent found for merchant"})
+		}
+		
+		if setuConsentID == nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "active consent found but setu_consent_id is null"})
+		}
+
+		// Create the data session
+		resp, err := aaClient.CreateDataSession(*setuConsentID, validFrom.Format(time.RFC3339), validUntil.Format(time.RFC3339))
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create data session", "details": err.Error()})
+		}
+
+		// Map session to DB
+		_, err = db.Pool.Exec(ctx, `
+			INSERT INTO aa_data_sessions (consent_id, setu_session_id, data_range_from, data_range_to)
+			VALUES ($1, $2, $3, $4)
+		`, internalConsentID, resp.ID, validFrom, validUntil)
+		
+		if err != nil {
+			log.Printf("failed to save data session to db: %v", err)
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to save session to DB", "details": err.Error()})
+		}
+
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message":    "Data session created successfully. Listening for READY webhook.",
+			"session_id": resp.ID,
+		})
+	})
+
+	app.Post("/api/v1/reconcile", func(c *fiber.Ctx) error {
+		type ReconcileRequest struct {
+			MerchantID string `json:"merchant_id"`
+		}
+
+		var req ReconcileRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
+		}
+
+		if req.MerchantID == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "merchant_id is required"})
+		}
+
+		matches, err := reconciliation.RunDailyReconciliation(req.MerchantID, db.Pool)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "reconciliation failed", "details": err.Error()})
+		}
+
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "Reconciliation complete",
+			"matches_found": matches,
+		})
+	})
+
+	// Admin Routes
+	adminGroup := app.Group("/api/v1/admin")
+	adminGroup.Post("/trigger-pipeline", func(c *fiber.Ctx) error {
+		type TriggerRequest struct {
+			Date string `json:"date"` // Optional format "2006-01-02"
+		}
+		var req TriggerRequest
+		if err := c.BodyParser(&req); err != nil && string(c.Body()) != "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid json"})
+		}
+
+		targetDate := time.Now().AddDate(0, 0, -1) // default to yesterday
+		if req.Date != "" {
+			if parsed, err := time.Parse("2006-01-02", req.Date); err == nil {
+				targetDate = parsed
+			}
+		}
+
+		// Fire asynchronously so we don't block the API response
+		go cron.RunDailyPipeline(context.Background(), db.Pool, aaClient, targetDate)
+
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": "Pipeline triggered successfully",
+			"target_date": targetDate.Format("2006-01-02"),
+		})
+	})
+
+	// Demo Routes
+	demoGroup := app.Group("/api/v1/demo")
+	demoGroup.Get("/config", func(c *fiber.Ctx) error {
+		var merchantID, providerID string
+		err := db.Pool.QueryRow(context.Background(), "SELECT id FROM merchants LIMIT 1").Scan(&merchantID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "no merchants found"})
+		}
+		err = db.Pool.QueryRow(context.Background(), "SELECT id FROM vendor_integrations LIMIT 1").Scan(&providerID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "no vendor integrations found"})
+		}
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"merchant_id": merchantID,
+			"provider_id": providerID,
+		})
+	})
+	demoGroup.Post("/seed", func(c *fiber.Ctx) error {
+		type SeedRequest struct {
+			MerchantID string `json:"merchant_id"`
+			ProviderID string `json:"provider_id"`
+		}
+		var req SeedRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid json"})
+		}
+		if req.MerchantID == "" || req.ProviderID == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "merchant_id and provider_id are required"})
+		}
+		
+		err := demo.SeedMockRazorpayData(context.Background(), db.Pool, req.MerchantID, req.ProviderID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "seeding failed", "details": err.Error()})
+		}
+		
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Mock data seeded successfully!"})
+	})
+	demoGroup.Get("/dashboard/:merchantId", demo.GetReconciliationDashboard(db.Pool))
 
 	// Webhooks
 	webhookGroup := app.Group("/api/v1/webhooks")
@@ -280,6 +428,25 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
+
+	// 7. Start the Daily Cron Scheduler in the background
+	go func() {
+		for {
+			now := time.Now()
+			// Calculate time until next 2:00 AM
+			next := time.Date(now.Year(), now.Month(), now.Day(), 2, 0, 0, 0, now.Location())
+			if now.After(next) {
+				next = next.Add(24 * time.Hour)
+			}
+			duration := next.Sub(now)
+			log.Printf("Scheduler: Sleeping for %v until next run at %s", duration, next.Format(time.RFC1123))
+			
+			time.Sleep(duration)
+			
+			// At 2:00 AM, run the pipeline for the previous day
+			cron.RunDailyPipeline(context.Background(), db.Pool, aaClient, time.Now().AddDate(0, 0, -1))
+		}
+	}()
 
 	// Listen in a goroutine so it doesn't block OS signal handling
 	go func() {
