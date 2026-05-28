@@ -7,6 +7,7 @@ import (
 
 	"passcheck/internal/setu"
 	"passcheck/internal/vendors"
+	"passcheck/internal/vendors/phonepe"
 	"passcheck/internal/vendors/razorpay"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -44,14 +45,23 @@ func processMerchant(db *pgxpool.Pool, aaClient *setu.SetuClient, merchantID str
 	log.Printf("[Merchant %s] Starting sync pipeline", merchantID)
 
 	// --- VENDOR SYNC ---
-	// Instantiate Razorpay provider. In the future, dynamically select providers based on active integrations.
-	provider := &razorpay.Provider{DB: db}
-	err := vendors.SyncVendorData(ctx, db, provider, merchantID, targetDate)
+	// Run for Razorpay
+	rzpProvider := &razorpay.Provider{DB: db}
+	err := vendors.SyncVendorData(ctx, db, rzpProvider, merchantID, targetDate)
 	if err != nil {
-		log.Printf("[Merchant %s] Vendor sync failed: %v", merchantID, err)
-		// We continue to bank sync even if vendor sync fails, as bank sync can take time to fulfill
+		log.Printf("[Merchant %s] Razorpay sync failed: %v", merchantID, err)
+		// We continue to bank sync even if vendor sync fails
 	} else {
-		log.Printf("[Merchant %s] Vendor sync completed successfully", merchantID)
+		log.Printf("[Merchant %s] Razorpay sync completed successfully", merchantID)
+	}
+
+	// Run for PhonePe
+	ppProvider := &phonepe.Provider{DB: db}
+	err = vendors.SyncVendorData(ctx, db, ppProvider, merchantID, targetDate)
+	if err != nil {
+		log.Printf("[Merchant %s] PhonePe sync failed: %v", merchantID, err)
+	} else {
+		log.Printf("[Merchant %s] PhonePe sync completed successfully", merchantID)
 	}
 
 	// --- BANK SYNC (Setu AA) ---
