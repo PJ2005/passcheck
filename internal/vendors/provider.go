@@ -10,6 +10,7 @@ import (
 type StandardVendorTxn struct {
 	VendorTxnID    string
 	Amount         float64
+	SettlementID   string
 	UTRNumber      string
 	SettlementDate time.Time
 	VendorName     string

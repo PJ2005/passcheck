@@ -137,6 +137,7 @@ func (p *Provider) FetchSettlements(ctx context.Context, merchantID string, date
 			standardTxns = append(standardTxns, vendors.StandardVendorTxn{
 				VendorTxnID:    item.EntityID,
 				Amount:         amountInRupees,
+				SettlementID:   settlement.ID,
 				UTRNumber:      item.UTR,
 				SettlementDate: settlementDate,
 				VendorName:     "Razorpay",

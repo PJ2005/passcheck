@@ -135,7 +135,14 @@ The server will start on `http://localhost:8080` (or the port defined in your `.
 
 ## Testing & Demo
 
+### Generating Synthetic Test Data
+Use the seedgen CLI to insert a batch of 55 synthetic reconciliation records directly into the database — clean matches, lumped settlements, truncated narrations, and T+1 timing bleeds — for realistic testing of the reconciliation engine:
+```bash
+go run ./cmd/seedgen -merchant <merchant_id>
+```
+If `-merchant` is omitted, the first merchant in the database is used.
+
+### Demo Endpoints
 The application provides demo endpoints to simulate the reconciliation flow without live API triggers:
-- `/api/v1/demo/seed`: Injects mock Razorpay and PhonePe transactions alongside existing bank UTRs.
 - `/api/v1/reconcile`: Triggers the reconciliation engine immediately.
 - `/api/v1/demo/dashboard/:merchantId`: Provides a visual web dashboard of the reconciliation results.

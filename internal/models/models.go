@@ -47,6 +47,16 @@ const (
 	ReconStatusDisputed  ReconStatus = "DISPUTED"
 )
 
+// ReconciliationMethod is stored as VARCHAR in the database (not a Postgres
+// ENUM) so new methods can be added later without a migration.
+type ReconciliationMethod string
+
+const (
+	ReconMethodDeterministic ReconciliationMethod = "deterministic"
+	ReconMethodAgent         ReconciliationMethod = "agent"
+	ReconMethodUnresolved    ReconciliationMethod = "unresolved"
+)
+
 // Models corresponding to the database tables
 
 type Merchant struct {
@@ -113,6 +123,7 @@ type VendorTransaction struct {
 	VendorIntegrationID uuid.UUID   `json:"vendor_integration_id" db:"vendor_integration_id"`
 	VendorTxnID         string      `json:"vendor_txn_id" db:"vendor_txn_id"`
 	Amount              float64     `json:"amount" db:"amount"`
+	SettlementID        *string     `json:"settlement_id" db:"settlement_id"`
 	UTRNumber           *string     `json:"utr_number" db:"utr_number"`
 	SettlementDate      *time.Time  `json:"settlement_date" db:"settlement_date"`
 	ReconStatus         ReconStatus `json:"recon_status" db:"recon_status"`
@@ -136,4 +147,14 @@ type ReconciledMatch struct {
 	VendorTransactionID uuid.UUID  `json:"vendor_transaction_id" db:"vendor_transaction_id"`
 	BankTransactionID   uuid.UUID  `json:"bank_transaction_id" db:"bank_transaction_id"`
 	MatchedAt           time.Time  `json:"matched_at" db:"matched_at"`
+}
+
+type ReconciliationLog struct {
+	ID                  uuid.UUID            `json:"id" db:"id"`
+	VendorTransactionID uuid.UUID            `json:"vendor_transaction_id" db:"vendor_transaction_id"`
+	BankTransactionID   *uuid.UUID           `json:"bank_transaction_id" db:"bank_transaction_id"`
+	Method              ReconciliationMethod `json:"method" db:"method"`
+	Confidence          *float64             `json:"confidence" db:"confidence"`
+	Reasoning           *string              `json:"reasoning" db:"reasoning"`
+	CreatedAt           time.Time            `json:"created_at" db:"created_at"`
 }
