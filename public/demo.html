@@ -295,6 +295,123 @@
             color: var(--text-muted);
         }
 
+        /* --- Two-tier performance panel --- */
+        .perf-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+            color: var(--text-main);
+        }
+
+        .stat-number.rate { color: var(--success); }
+        .stat-number.exceptions { color: var(--warning); }
+
+        .stat-note {
+            display: block;
+            font-size: 0.7rem;
+            font-weight: 400;
+            color: var(--text-muted);
+            margin-top: 0.35rem;
+        }
+
+        .method-bar {
+            display: flex;
+            height: 14px;
+            margin: 0 2rem;
+            border-radius: 9999px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .method-bar .seg {
+            width: 0%;
+            transition: width 0.6s ease;
+        }
+
+        .seg-deterministic { background: var(--success); }
+        .seg-agent { background: var(--accent); }
+        .seg-unresolved { background: var(--error); }
+
+        .method-labels {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.85rem 2rem 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .method-labels b { color: var(--text-main); }
+
+        .dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.4rem;
+        }
+
+        .dot-success { background: var(--success); }
+        .dot-accent { background: var(--accent); }
+        .dot-error { background: var(--error); }
+
+        /* --- Audit trail lists --- */
+        .scroll-list {
+            max-height: 340px;
+            overflow-y: auto;
+            padding: 1rem 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .audit-row {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .audit-row .row-head {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 0.75rem;
+            margin-bottom: 0.35rem;
+        }
+
+        .audit-row .reasoning {
+            color: var(--text-muted);
+            line-height: 1.45;
+        }
+
+        .chip {
+            padding: 0.15rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .chip-deterministic {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+        }
+
+        .chip-agent {
+            background: rgba(59, 130, 246, 0.15);
+            color: #60a5fa;
+        }
+
+        .conf { font-weight: 600; }
+
         .toast-container {
             position: fixed;
             bottom: 2rem;
@@ -335,14 +452,20 @@
     <header>
         <h1>PassCheck FIU</h1>
         <div class="actions">
-            <button class="btn" id="btn-seed" onclick="seedData()">
+            <button class="btn" id="btn-seed" onclick="checkDataStatus()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 <span class="loader" id="loader-seed"></span>
-                Seed Mock Data
+                Check Data
             </button>
             <button class="btn primary" id="btn-reconcile" onclick="runReconciliation()">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21v-5h5"/></svg>
                 <span class="loader" id="loader-reconcile"></span>
                 Run Engine
+            </button>
+            <button class="btn primary" id="btn-agent" onclick="runAgentResolution()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <span class="loader" id="loader-agent"></span>
+                Run Agent Pass
             </button>
         </div>
     </header>
@@ -374,6 +497,40 @@
 
         <div class="table-container">
             <div class="table-header">
+                <h2>Reconciliation Performance</h2>
+                <div class="badge">TWO-TIER SYSTEM</div>
+            </div>
+            <div class="perf-stats">
+                <div>
+                    <div class="metric-title">Match Rate</div>
+                    <div class="stat-number rate" id="stat-match-rate">—</div>
+                    <span class="stat-note">(deterministic + agent) / total decisions</span>
+                </div>
+                <div>
+                    <div class="metric-title">Throughput</div>
+                    <div class="stat-number" id="stat-throughput">—</div>
+                    <span class="stat-note" id="stat-throughput-note">Run reconciliation to see throughput</span>
+                </div>
+                <div>
+                    <div class="metric-title">Exceptions Remaining</div>
+                    <div class="stat-number exceptions" id="stat-exceptions">—</div>
+                    <span class="stat-note">unresolved after both passes</span>
+                </div>
+            </div>
+            <div class="method-bar" title="Share of audit-trail decisions by method">
+                <div class="seg seg-deterministic" id="seg-deterministic"></div>
+                <div class="seg seg-agent" id="seg-agent"></div>
+                <div class="seg seg-unresolved" id="seg-unresolved"></div>
+            </div>
+            <div class="method-labels">
+                <span><i class="dot dot-success"></i>Deterministic: <b id="lbl-deterministic">0</b></span>
+                <span><i class="dot dot-accent"></i>Agent: <b id="lbl-agent">0</b></span>
+                <span><i class="dot dot-error"></i>Unresolved: <b id="lbl-unresolved">0</b></span>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="table-header">
                 <h2>Pending Transactions</h2>
                 <div class="badge" id="pending-count">0 UNMATCHED</div>
             </div>
@@ -390,12 +547,32 @@
                     <tr>
                         <td colspan="4">
                             <div class="empty-state">
-                                No pending transactions found. Click "Seed Mock Data" to begin.
+                                No pending transactions found. Click "Check Data" to verify, or run <code>go run ./cmd/seedgen</code> to generate test data.
                             </div>
                         </td>
                     </tr>
                 </tbody>
             </table>
+        </div>
+
+        <div class="table-container">
+            <div class="table-header">
+                <h2>Exception List</h2>
+                <div class="badge" id="exceptions-badge">0 EXCEPTIONS</div>
+            </div>
+            <div class="scroll-list" id="exception-list">
+                <div class="empty-state">No unresolved exceptions — every transaction has been reconciled.</div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="table-header">
+                <h2>Recent Decisions</h2>
+                <div class="badge">AUDIT TRAIL</div>
+            </div>
+            <div class="scroll-list" id="decision-list">
+                <div class="empty-state">No reconciliation decisions yet.</div>
+            </div>
         </div>
     </main>
 
@@ -405,6 +582,8 @@
         let merchantId = "";
         let providerId = "";
         let currentPendingIds = new Set();
+        let lastReconResult = null;   // full result payload from the last /api/v1/reconcile call
+        let lastDashboard = null;     // latest dashboard payload, used by checkDataStatus()
 
         const formatCurrency = (amount) => {
             return new Intl.NumberFormat('en-IN', {
@@ -463,6 +642,7 @@
             try {
                 const res = await fetch(`/api/v1/demo/dashboard/${merchantId}`);
                 const data = await res.json();
+                lastDashboard = data;
 
                 const expEl = document.getElementById('val-expected');
                 const setEl = document.getElementById('val-settled');
@@ -481,6 +661,10 @@
 
                 document.getElementById('pending-count').innerText = `${data.pending_transactions.length} UNMATCHED`;
 
+                renderPerformancePanel(data);
+                renderExceptions(data.exceptions || []);
+                renderDecisions(data.recent_matches || []);
+
                 const tbody = document.getElementById('table-body');
                 const newIds = new Set(data.pending_transactions.map(t => t.vendor_txn_id));
 
@@ -494,7 +678,7 @@
                             tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">All transactions matched successfully!</div></td></tr>`;
                         }, 500);
                     } else {
-                        tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No pending transactions found. Click "Seed Mock Data" to begin.</div></td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No pending transactions found. Click "Check Data" to verify, or run <code>go run ./cmd/seedgen</code> to generate test data.</div></td></tr>`;
                     }
                     currentPendingIds = newIds;
                     return;
@@ -537,9 +721,90 @@
             }
         };
 
-        const seedData = async () => {
+        const renderPerformancePanel = (data) => {
+            const mb = data.method_breakdown || {};
+            const det = mb.deterministic || 0;
+            const agent = mb.agent || 0;
+            const unresolved = mb.unresolved || 0;
+            const total = det + agent + unresolved;
+
+            // Match rate over every audited decision; guard the empty state.
+            const rateEl = document.getElementById('stat-match-rate');
+            if (total === 0) {
+                rateEl.innerText = "—";
+            } else {
+                rateEl.innerText = `${(((det + agent) / total) * 100).toFixed(1)}%`;
+            }
+
+            // Throughput only exists on the reconcile response, not here.
+            const tpEl = document.getElementById('stat-throughput');
+            const tpNote = document.getElementById('stat-throughput-note');
+            if (lastReconResult && lastReconResult.throughput_per_sec != null) {
+                tpEl.innerText = `${lastReconResult.throughput_per_sec.toLocaleString('en-IN', { maximumFractionDigits: 0 })} rec/s`;
+                tpNote.innerText = `from last engine run (${lastReconResult.elapsed_ms} ms for ${lastReconResult.total_processed} records)`;
+            } else {
+                tpEl.innerText = "—";
+                tpNote.innerText = "Run reconciliation to see throughput";
+            }
+
+            document.getElementById('stat-exceptions').innerText = data.exception_count ?? data.pending_transactions.length;
+
+            // Method breakdown bar + labels. Zero-total keeps all segments at 0
+            // width and shows an honest empty track instead of fake data.
+            const pct = (n) => total === 0 ? 0 : (n / total) * 100;
+            document.getElementById('seg-deterministic').style.width = pct(det) + '%';
+            document.getElementById('seg-agent').style.width = pct(agent) + '%';
+            document.getElementById('seg-unresolved').style.width = pct(unresolved) + '%';
+            document.getElementById('lbl-deterministic').innerText = det;
+            document.getElementById('lbl-agent').innerText = agent;
+            document.getElementById('lbl-unresolved').innerText = unresolved;
+        };
+
+        const renderExceptions = (exceptions) => {
+            const listEl = document.getElementById('exception-list');
+            document.getElementById('exceptions-badge').innerText = `${exceptions.length} EXCEPTION${exceptions.length === 1 ? '' : 'S'}`;
+
+            if (exceptions.length === 0) {
+                listEl.innerHTML = `<div class="empty-state">No unresolved exceptions — every transaction has been reconciled.</div>`;
+                return;
+            }
+
+            listEl.innerHTML = exceptions.map(e => `
+                <div class="audit-row">
+                    <div class="row-head">
+                        <span class="utr">${e.vendor_txn_id}</span>
+                        <span class="amount">₹${formatCurrency(e.amount)}</span>
+                        ${e.settlement_id ? `<span class="utr">${e.settlement_id}</span>` : ''}
+                    </div>
+                    <div class="reasoning">${e.reasoning}</div>
+                </div>
+            `).join('');
+        };
+
+        const renderDecisions = (matches) => {
+            const listEl = document.getElementById('decision-list');
+
+            if (!matches || matches.length === 0) {
+                listEl.innerHTML = `<div class="empty-state">No reconciliation decisions yet.</div>`;
+                return;
+            }
+
+            listEl.innerHTML = matches.map(m => `
+                <div class="audit-row">
+                    <div class="row-head">
+                        <span class="chip chip-${m.method}">${m.method}</span>
+                        <span class="conf">${(m.confidence * 100).toFixed(0)}% confidence</span>
+                        <span class="utr">${m.vendor_txn_id}</span>
+                        <span class="amount">₹${formatCurrency(m.amount)}</span>
+                    </div>
+                    <div class="reasoning">${m.reasoning}</div>
+                </div>
+            `).join('');
+        };
+
+        const checkDataStatus = async () => {
             if (!merchantId) return showToast("Config not loaded yet", "error");
-            
+
             const btn = document.getElementById('btn-seed');
             const loader = document.getElementById('loader-seed');
             btn.style.pointerEvents = 'none';
@@ -547,18 +812,13 @@
             loader.style.display = 'inline-block';
 
             try {
-                const res = await fetch('/api/v1/demo/seed', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ merchant_id: merchantId, provider_id: providerId })
-                });
-                const data = await res.json();
-                
-                if (res.ok) {
-                    showToast(data.message);
-                    await refreshDashboard(true, false);
+                await refreshDashboard(false, false);
+
+                if (!lastDashboard || !lastDashboard.total_expected_funds) {
+                    showToast("No transactions found. Generate synthetic data first: go run ./cmd/seedgen", "error");
                 } else {
-                    throw new Error(data.error || "Seeding failed");
+                    const unmatched = lastDashboard.pending_transactions.length;
+                    showToast(`${unmatched} transaction(s) currently awaiting reconciliation.`);
                 }
             } catch (err) {
                 showToast(err.message, "error");
@@ -587,10 +847,49 @@
                 const data = await res.json();
                 
                 if (res.ok) {
-                    showToast(`Reconciliation complete! Matched ${data.matches_found} transactions.`);
+                    lastReconResult = data.result || null;
+                    const matched = lastReconResult ? lastReconResult.matched_count : 0;
+                    showToast(`Reconciliation complete! Matched ${matched} transactions.`);
                     await refreshDashboard(true, true);
                 } else {
                     throw new Error(data.error || "Engine failed");
+                }
+            } catch (err) {
+                showToast(err.message, "error");
+            } finally {
+                btn.style.animation = '';
+                btn.style.pointerEvents = 'auto';
+                loader.style.display = 'none';
+            }
+        };
+
+        const runAgentResolution = async () => {
+            if (!merchantId) return showToast("Config not loaded yet", "error");
+
+            const btn = document.getElementById('btn-agent');
+            const loader = document.getElementById('loader-agent');
+            btn.style.animation = 'pulseGlow 1s infinite';
+            btn.style.pointerEvents = 'none';
+            loader.style.display = 'inline-block';
+
+            try {
+                const res = await fetch('/api/v1/reconcile/agent', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ merchant_id: merchantId })
+                });
+                const data = await res.json();
+
+                if (res.status === 503) {
+                    showToast("Agent resolution unavailable — GEMINI_API_KEY not configured on the server", "error");
+                    return;
+                }
+
+                if (res.ok) {
+                    showToast(`Agent pass complete! Resolved ${data.resolved_count} exceptions.`);
+                    await refreshDashboard(true, true);
+                } else {
+                    throw new Error(data.error || "Agent resolution failed");
                 }
             } catch (err) {
                 showToast(err.message, "error");

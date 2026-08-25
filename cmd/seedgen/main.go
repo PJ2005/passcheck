@@ -3,13 +3,15 @@
 //
 //	go run ./cmd/seedgen -merchant <merchant_id>
 //
-// It produces exactly 55 vendor_transactions and their corresponding
-// bank_transactions across four categories:
+// It produces vendor_transactions and their corresponding bank_transactions
+// across five categories:
 //
 //   - ~70% clean matches (settlement_id fully present in the NEFT narration)
 //   - ~15% lumped settlements (multiple vendor settlements funded by ONE bank credit)
 //   - ~10% truncated narrations (bank narration cuts the settlement_id mid-string)
 //   - ~5%  T+1 timing bleed (late-night settlement landing in the next day's bank batch)
+//   - a few genuinely orphaned records with NO bank-side counterpart at all,
+//     which both engine passes are expected to leave unresolved gracefully.
 package main
 
 import (
@@ -25,19 +27,23 @@ import (
 	"passcheck/internal/database"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
 
-// Category sizing. Clean is 39 (not 38) so all categories sum to exactly 55;
-// 39/55 is still ~70%. Lumped is 8 vendor transactions flushed as groups of
-// 3/3/2, each group funded by a single bank credit.
+// Category sizing. Clean is 39 (not 38) so the four bank-backed categories
+// sum to exactly 55; 39/55 is still ~70%. Lumped is 8 vendor transactions
+// flushed as groups of 3/3/2, each group funded by a single bank credit.
+// Orphans are vendor-only records with deliberately NO bank counterpart:
+// they simulate settlements that never actually hit the bank (or data that
+// can never reconcile through this pipeline), and are expected to surface
+// as audited exceptions in BOTH engine passes - the reliable on-camera case.
 const (
-	totalTxns        = 55
+	totalTxns        = 56 // 55 bank-backed records + 1 deliberately match-less orphan
 	cleanCount       = 39
 	lumpedCount      = 8
 	truncatedCount   = 5
 	timingBleedCount = 3
+	orphanCount      = 1
 	netFeeFactor     = 0.98 // platform fee: bank receives net = gross * 0.98
 )
 
@@ -107,28 +113,49 @@ func main() {
 		log.Printf("No -merchant flag provided, using first merchant: %s", merchantID)
 	}
 
-	vendorIntegrationID, err := ensureVendorIntegration(ctx, db.Pool, merchantID)
+	// Everything below - placeholder bank account creation, all vendor/bank
+	// inserts across all five categories, and the pre-commit verification -
+	// runs inside ONE transaction: either the whole batch lands or the
+	// database is left exactly as it was before the run. Same pattern as
+	// internal/reconciliation/engine.go and internal/agent/resolver.go.
+	tx, err := db.Pool.Begin(ctx)
+	if err != nil {
+		log.Fatalf("failed to begin transaction: %v", err)
+	}
+	defer tx.Rollback(ctx)
+
+	vendorIntegrationID, err := ensureVendorIntegration(ctx, tx, merchantID)
 	if err != nil {
 		log.Fatalf("failed to resolve vendor integration: %v", err)
 	}
 	log.Printf("Using vendor integration: %s", vendorIntegrationID)
 
-	bankAccountID, err := ensureBankAccount(ctx, db.Pool, merchantID)
+	bankAccountID, err := ensureBankAccount(ctx, tx, merchantID)
 	if err != nil {
 		log.Fatalf("failed to resolve bank account: %v", err)
 	}
 	log.Printf("Using bank account: %s", bankAccountID)
 
-	stats, err := generate(ctx, db.Pool, vendorIntegrationID, bankAccountID)
+	stats, err := generate(ctx, tx, vendorIntegrationID, bankAccountID)
 	if err != nil {
+		// Includes the pre-commit count-assertion failure path: the deferred
+		// Rollback above undoes every insert, leaving nothing partially seeded.
 		log.Fatalf("generation failed: %v", err)
 	}
+
+	if err := tx.Commit(ctx); err != nil {
+		log.Fatalf("failed to commit transaction: %v", err)
+	}
+
+	// Success summary intentionally printed only AFTER a successful commit:
+	// a failed commit is an error path and must not report generated records.
 
 	fmt.Println("\n=== seedgen summary ===")
 	fmt.Printf("Clean matches:          %d vendor / %d bank\n", stats.cleanVendors, stats.cleanBanks)
 	fmt.Printf("Lumped settlements:     %d vendor / %d bank (groups of 3/3/2)\n", stats.lumpedVendors, stats.lumpedBanks)
 	fmt.Printf("Truncated narrations:   %d vendor / %d bank\n", stats.truncatedVendors, stats.truncatedBanks)
 	fmt.Printf("T+1 timing bleeds:      %d vendor / %d bank\n", stats.timingVendors, stats.timingBanks)
+	fmt.Printf("Genuinely orphaned:     %d vendor / 0 bank (no counterpart, expected to remain unresolved)\n", stats.orphanVendors)
 	fmt.Printf("TOTAL:                  %d vendor_transactions + %d bank_transactions = %d records\n",
 		stats.vendorRows, stats.bankRows, stats.vendorRows+stats.bankRows)
 }
@@ -138,24 +165,31 @@ type genStats struct {
 	lumpedVendors, lumpedBanks       int
 	truncatedVendors, truncatedBanks int
 	timingVendors, timingBanks       int
+	orphanVendors                    int
 	vendorRows, bankRows             int
 }
 
-func generate(ctx context.Context, pool *pgxpool.Pool, vendorIntegrationID, bankAccountID string) (*genStats, error) {
+func generate(ctx context.Context, tx pgx.Tx, vendorIntegrationID, bankAccountID string) (*genStats, error) {
 	stats := &genStats{}
 	seq := 0
 	ref := 100000 + rand.Intn(800000)
+	var vendorIDs []string // every row inserted this run, verified pre-commit
 
 	insertVendor := func(gross float64, utr, settlementID string, date time.Time) error {
-		_, err := pool.Exec(ctx, `
+		var id string
+		err := tx.QueryRow(ctx, `
 			INSERT INTO vendor_transactions
 				(vendor_integration_id, vendor_txn_id, amount, utr_number, settlement_id, settlement_date, recon_status)
 			VALUES ($1, $2, $3, $4, $5, $6, 'UNMATCHED')
-		`, vendorIntegrationID, fmt.Sprintf("pay_%s%04d", randStr(12), seq), gross, utr, settlementID, date)
+			RETURNING id
+		`, vendorIntegrationID, fmt.Sprintf("pay_%s%04d", randStr(12), seq), gross, utr, settlementID, date).Scan(&id)
+		if err == nil {
+			vendorIDs = append(vendorIDs, id)
+		}
 		return err
 	}
 	insertBank := func(amount float64, narration, utr string, date time.Time) error {
-		_, err := pool.Exec(ctx, `
+		_, err := tx.Exec(ctx, `
 			INSERT INTO bank_transactions
 				(bank_account_id, amount, txn_type, narration, utr_number, txn_date)
 			VALUES ($1, $2, 'CREDIT', $3, $4, $5)
@@ -264,18 +298,50 @@ func generate(ctx context.Context, pool *pgxpool.Pool, vendorIntegrationID, bank
 		stats.timingBanks++
 	}
 
-	stats.vendorRows = cleanCount + lumpedCount + truncatedCount + timingBleedCount
+	// --- Category E: genuinely orphaned settlements (no bank counterpart) ---
+	for i := 0; i < orphanCount; i++ {
+		seq++
+		gross := genGross()
+		setl := genSettlementID()
+		settledAt := atDay(dayFor(seq), 15+rand.Intn(5), rand.Intn(60))
+
+		if err := insertVendor(gross, genUTR(), setl, settledAt); err != nil {
+			return nil, err
+		}
+		stats.orphanVendors++
+		// Deliberately NO insertBank() call: nothing on the bank side will
+		// ever correspond to this record. Phase 1 finds no candidate at any
+		// tier and Phase 2 has nothing to judge - the expected, graceful
+		// outcome is an audited 'unresolved' exception, never a false match.
+	}
+
+	stats.vendorRows = cleanCount + lumpedCount + truncatedCount + timingBleedCount + orphanCount
 	stats.bankRows = cleanCount + 3 + truncatedCount + timingBleedCount
 
 	if stats.vendorRows != totalTxns {
 		return nil, fmt.Errorf("internal error: generated %d vendor rows, expected %d", stats.vendorRows, totalTxns)
 	}
+
+	// Pre-commit verification through the SAME transaction: every row we
+	// intended to insert must be visible here (uncommitted but readable).
+	// If anything is off we return an error and the deferred Rollback in
+	// main() wipes the entire batch - no partial seeds can ever persist.
+	var seen int
+	if err := tx.QueryRow(ctx,
+		`SELECT COUNT(*) FROM vendor_transactions WHERE id = ANY($1)`,
+		vendorIDs).Scan(&seen); err != nil {
+		return nil, fmt.Errorf("failed to verify inserted rows: %w", err)
+	}
+	if seen != len(vendorIDs) {
+		return nil, fmt.Errorf("pre-commit verification mismatch: %d of %d generated vendor rows visible", seen, len(vendorIDs))
+	}
+
 	return stats, nil
 }
 
-func ensureVendorIntegration(ctx context.Context, pool *pgxpool.Pool, merchantID string) (string, error) {
+func ensureVendorIntegration(ctx context.Context, tx pgx.Tx, merchantID string) (string, error) {
 	var id string
-	err := pool.QueryRow(ctx,
+	err := tx.QueryRow(ctx,
 		"SELECT id FROM vendor_integrations WHERE merchant_id = $1 LIMIT 1", merchantID).Scan(&id)
 	if err == nil {
 		return id, nil
@@ -284,7 +350,7 @@ func ensureVendorIntegration(ctx context.Context, pool *pgxpool.Pool, merchantID
 		return "", err
 	}
 	// Fresh database: create a placeholder integration so generation can proceed.
-	err = pool.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		INSERT INTO vendor_integrations (merchant_id, vendor_name, encrypted_credentials)
 		VALUES ($1, 'Razorpay', '{"mock": "keys"}')
 		RETURNING id
@@ -292,9 +358,9 @@ func ensureVendorIntegration(ctx context.Context, pool *pgxpool.Pool, merchantID
 	return id, err
 }
 
-func ensureBankAccount(ctx context.Context, pool *pgxpool.Pool, merchantID string) (string, error) {
+func ensureBankAccount(ctx context.Context, tx pgx.Tx, merchantID string) (string, error) {
 	var id string
-	err := pool.QueryRow(ctx,
+	err := tx.QueryRow(ctx,
 		"SELECT id FROM merchant_bank_accounts WHERE merchant_id = $1 LIMIT 1", merchantID).Scan(&id)
 	if err == nil {
 		return id, nil
@@ -302,7 +368,7 @@ func ensureBankAccount(ctx context.Context, pool *pgxpool.Pool, merchantID strin
 	if err != pgx.ErrNoRows {
 		return "", err
 	}
-	err = pool.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		INSERT INTO merchant_bank_accounts (merchant_id, rpd_request_id, account_number, ifsc_code, verified_account_name)
 		VALUES ($1, $2, '50100234567890', 'HDFC0001234', 'SEEDGEN PLACEHOLDER')
 		RETURNING id
