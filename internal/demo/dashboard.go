@@ -133,22 +133,30 @@ func GetReconciliationDashboard(db *pgxpool.Pool) fiber.Handler {
 			}
 		}
 
-		// 5. Recent matches with decision transparency: last 10 resolved rows,
-		// showing which tier matched and at what confidence.
+		// 5. Recent matches with decision transparency: surface ONE exemplar of
+		// every confidence tier first (so partial/lumped heuristics are always
+		// visible to judges alongside exact hits), then fill remaining slots
+		// with the most recent matches overall. Capped at 10 rows.
 		recentMatches := []MatchEntry{}
 		rmRows, err := db.Query(ctx, `
-			SELECT vt.vendor_txn_id, vt.amount, rl.method, rl.confidence, COALESCE(rl.reasoning, '')
-			FROM vendor_transactions vt
-			JOIN vendor_integrations vi ON vt.vendor_integration_id = vi.id
-			CROSS JOIN LATERAL (
-				SELECT r.method, r.confidence, r.reasoning, r.created_at
-				FROM reconciliation_log r
-				WHERE r.vendor_transaction_id = vt.id AND r.method = 'deterministic'
-				ORDER BY r.created_at DESC
-				LIMIT 1
-			) rl
-			WHERE vi.merchant_id = $1 AND vt.recon_status = 'MATCHED'
-			ORDER BY rl.created_at DESC
+			WITH ranked AS (
+				SELECT vt.vendor_txn_id, vt.amount, rl.method, rl.confidence,
+				       COALESCE(rl.reasoning, '') AS reasoning,
+				       ROW_NUMBER() OVER (PARTITION BY rl.confidence ORDER BY rl.created_at DESC) AS rn
+				FROM vendor_transactions vt
+				JOIN vendor_integrations vi ON vt.vendor_integration_id = vi.id
+				CROSS JOIN LATERAL (
+					SELECT r.method, r.confidence, r.reasoning, r.created_at
+					FROM reconciliation_log r
+					WHERE r.vendor_transaction_id = vt.id AND r.method = 'deterministic'
+					ORDER BY r.created_at DESC
+					LIMIT 1
+				) rl
+				WHERE vi.merchant_id = $1 AND vt.recon_status = 'MATCHED'
+			)
+			SELECT vendor_txn_id, amount, method, confidence, reasoning
+			FROM ranked
+			ORDER BY rn ASC, confidence ASC
 			LIMIT 10
 		`, merchantID)
 		if err != nil {
