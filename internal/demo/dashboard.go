@@ -19,10 +19,10 @@ type PendingTransaction struct {
 // ExceptionEntry is an UNMATCHED vendor transaction paired with the audit
 // reasoning the engine recorded when it failed to resolve it.
 type ExceptionEntry struct {
-	VendorTxnID  string   `json:"vendor_txn_id"`
-	Amount       float64  `json:"amount"`
-	SettlementID *string  `json:"settlement_id"`
-	Reasoning    string   `json:"reasoning"`
+	VendorTxnID  string  `json:"vendor_txn_id"`
+	Amount       float64 `json:"amount"`
+	SettlementID *string `json:"settlement_id"`
+	Reasoning    string  `json:"reasoning"`
 }
 
 // MatchEntry explains WHY a recent match succeeded - tier method, confidence,
@@ -170,7 +170,31 @@ func GetReconciliationDashboard(db *pgxpool.Pool) fiber.Handler {
 			}
 		}
 
-		// 6. Return JSON payload
+		// 6. Method breakdown: how many decisions each layer made. Seeded with
+		// all three methods so an honest zero stays visible in the JSON (e.g.
+		// agent: 0 proves the deterministic pass did all the work).
+		methodBreakdown := map[string]int{"deterministic": 0, "agent": 0, "unresolved": 0}
+		mbRows, err := db.Query(ctx, `
+			SELECT rl.method, COUNT(*)
+			FROM reconciliation_log rl
+			JOIN vendor_transactions vt ON vt.id = rl.vendor_transaction_id
+			JOIN vendor_integrations vi ON vt.vendor_integration_id = vi.id
+			WHERE vi.merchant_id = $1
+			GROUP BY rl.method
+		`, merchantID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to compute method breakdown", "details": err.Error()})
+		}
+		defer mbRows.Close()
+		for mbRows.Next() {
+			var method string
+			var count int
+			if err := mbRows.Scan(&method, &count); err == nil {
+				methodBreakdown[method] = count
+			}
+		}
+
+		// 7. Return JSON payload
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			"merchant_id":           merchantID,
 			"total_expected_funds":  totalExpected,
@@ -180,6 +204,7 @@ func GetReconciliationDashboard(db *pgxpool.Pool) fiber.Handler {
 			"exception_count":       exceptionCount,
 			"exceptions":            exceptions,
 			"recent_matches":        recentMatches,
+			"method_breakdown":      methodBreakdown,
 		})
 	}
 }

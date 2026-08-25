@@ -146,3 +146,11 @@ If `-merchant` is omitted, the first merchant in the database is used.
 The application provides demo endpoints to simulate the reconciliation flow without live API triggers:
 - `/api/v1/reconcile`: Triggers the reconciliation engine immediately.
 - `/api/v1/demo/dashboard/:merchantId`: Provides a visual web dashboard of the reconciliation results.
+
+### AI Agent Exception Resolution
+Set `GEMINI_API_KEY` in your `.env` (get a free key at [Google AI Studio](https://aistudio.google.com/apikey)) to enable Gemini-powered resolution of transactions the deterministic engine cannot match. The demo flow is two steps:
+```bash
+curl -X POST http://localhost:8080/api/v1/reconcile       -H 'Content-Type: application/json' -d '{"merchant_id": "<merchant_id>"}'  # deterministic pass
+curl -X POST http://localhost:8080/api/v1/reconcile/agent -H 'Content-Type: application/json' -d '{"merchant_id": "<merchant_id>"}'  # agent pass on leftovers
+```
+Every decision from both passes is written to the `reconciliation_log` audit table and surfaced on the dashboard. Without the key, step 1 still works and step 2 returns a clear 503.

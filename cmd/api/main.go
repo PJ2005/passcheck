@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"passcheck/internal/agent"
 	"passcheck/internal/database"
 	"passcheck/internal/demo"
 	"passcheck/internal/reconciliation"
@@ -32,7 +33,21 @@ func main() {
 	}
 	defer db.Close()
 
-	// 3. Initialize Fiber App
+	// 3. Initialize Gemini agent client (optional). The deterministic
+	// reconciliation endpoint must keep working without it: a missing or
+	// invalid key only disables the agent pass, it never crashes the server.
+	var agentClient *agent.GeminiClient
+	geminiAPIKey := os.Getenv("GEMINI_API_KEY")
+	if geminiAPIKey == "" {
+		log.Println("GEMINI_API_KEY not set — agent-based exception resolution will be unavailable")
+	} else if ac, initErr := agent.NewGeminiClient(context.Background(), geminiAPIKey); initErr != nil {
+		log.Printf("Failed to initialize Gemini agent client (agent endpoint will return 503): %v", initErr)
+	} else {
+		agentClient = ac
+		log.Printf("Gemini agent client initialized (model: %s)", agent.ModelName)
+	}
+
+	// 4. Initialize Fiber App
 	app := fiber.New(fiber.Config{
 		DisableStartupMessage: false,
 		AppName:               "PassCheck FIU API Service",
@@ -46,7 +61,7 @@ func main() {
 	app.Static("/", "./public")
 	app.Static("/demo", "./public/demo.html")
 
-	// 4. Expose routes
+	// 5. Expose routes
 	app.Get("/api/v1/health", func(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
@@ -85,6 +100,38 @@ func main() {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			"message": "Reconciliation complete",
 			"result":  result,
+		})
+	})
+
+	// Agent pass: sends whatever the deterministic engine left unresolved to
+	// Gemini for judgment. Requires GEMINI_API_KEY at startup; otherwise this
+	// route degrades to a clear 503 while the rest of the API keeps working.
+	app.Post("/api/v1/reconcile/agent", func(c *fiber.Ctx) error {
+		if agentClient == nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+				"error": "agent resolver unavailable, GEMINI_API_KEY not configured",
+			})
+		}
+
+		type AgentRequest struct {
+			MerchantID string `json:"merchant_id"`
+		}
+		var req AgentRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
+		}
+		if req.MerchantID == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "merchant_id is required"})
+		}
+
+		resolved, err := agent.ResolveExceptions(context.Background(), req.MerchantID, db.Pool, agentClient)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "agent resolution failed", "details": err.Error()})
+		}
+
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message":        "Agent resolution complete",
+			"resolved_count": resolved,
 		})
 	})
 
@@ -127,7 +174,7 @@ func main() {
 	})
 	demoGroup.Get("/dashboard/:merchantId", demo.GetReconciliationDashboard(db.Pool))
 
-	// 5. Support Graceful Shutdown
+	// 6. Support Graceful Shutdown
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
