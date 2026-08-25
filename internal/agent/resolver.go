@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"strings"
 	"time"
 
@@ -34,7 +35,7 @@ type AgentDecision struct {
 
 // resolverSystemInstruction pins the model to the judge role and forbids
 // prose, so GenerateJSON's output stays directly decodable.
-const resolverSystemInstruction = `You are a financial reconciliation assistant for an Indian payment gateway. You will be given one vendor-side settlement transaction and a small list of candidate bank credit transactions. Determine if any single candidate is very likely the true match for the vendor transaction, based on amount similarity, date proximity, and any settlement_id or UTR fragments visible in the bank narration. Indian NEFT bank credits often show truncated or lumped settlement references, so partial textual overlap is meaningful evidence, not disqualifying. Vendor amounts are GROSS while bank credit amounts are NET of roughly 2% platform fees: a candidate within about 2% of the vendor amount is financially consistent, not a mismatch. If no candidate is a confident match, say so explicitly rather than guessing. Respond ONLY with JSON matching this exact shape: {"is_match": boolean, "bank_transaction_id": string, "confidence": number between 0 and 1, "reasoning": string under 200 characters}.`
+const resolverSystemInstruction = `You are a financial reconciliation assistant for an Indian payment gateway. You will be given one vendor-side settlement transaction and a short list of candidate bank credit transactions. Each candidate carries three pre-computed evidence signals: amount_ratio (bank amount divided by vendor amount; roughly 0.98 is expected because Indian gateway platform fees run about 2%, so values near 0.98 are strong evidence and values far outside the 0.90-1.02 band are weak), date_gap_days (smaller gaps are stronger evidence, but T+1 overnight credits and weekend or holiday delays of up to 2-3 days are normal banking behavior, not disqualifying), and settlement_id_overlap (how many characters of the vendor's settlement_id appear in the candidate narration; higher overlap out of the total length is stronger evidence, especially where bank systems truncate narrations). Base your reasoning primarily on these three computed signals rather than re-deriving evidence from raw amounts or narration text yourself. If no candidate clears the bar confidently, say so explicitly rather than guessing. Respond ONLY with JSON matching this exact shape: {"is_match": boolean, "bank_transaction_id": string, "confidence": number between 0 and 1, "reasoning": string under 200 characters}.`
 
 // unresolvedTxn is one vendor record the deterministic engine gave up on.
 type unresolvedTxn struct {
@@ -204,12 +205,15 @@ func ResolveExceptions(ctx context.Context, merchantID string, db *pgxpool.Pool,
 	return resolvedCount, nil
 }
 
-// fetchCandidates gathers the plausible bank credits for one unresolved row:
-// credits not yet consumed by ANY reconciled link, dated between the vendor
-// settlement day and day+3 inclusive - one day wider than Phase 1's window,
-// because the agent exists precisely to catch cases the narrow window missed.
-// Ordering by amount proximity puts the most likely candidates near the top of
-// the model's attention, and LIMIT 5 bounds prompt size and cost.
+// fetchCandidates gathers the plausible bank credits for one unresolved row.
+// Two deterministic guards run in the database before anything reaches the
+// model: a date window (settlement day through day+3 inclusive - one day
+// wider than Phase 1, since the agent exists to catch cases the narrow
+// window missed) and an amount band of 90%-102% of the vendor amount, which
+// admits the ~2% platform-fee relationship with headroom while keeping
+// obviously unrelated amounts from wasting model attention. Survivors are
+// ordered by amount proximity so the likeliest candidates lead the prompt,
+// and capped at 5 to bound prompt size and cost.
 func fetchCandidates(ctx context.Context, tx pgx.Tx, merchantID string, v unresolvedTxn) ([]bankCandidate, error) {
 	if v.SettlementDate == nil {
 		return nil, nil // no date anchor -> no meaningful window to search
@@ -224,6 +228,7 @@ func fetchCandidates(ctx context.Context, tx pgx.Tx, merchantID string, v unreso
 		JOIN merchant_bank_accounts mba ON bt.bank_account_id = mba.id
 		WHERE mba.merchant_id = $1
 		  AND bt.txn_date >= $2 AND bt.txn_date < $3
+		  AND bt.amount >= $4 * 0.90 AND bt.amount <= $4 * 1.02
 		  AND NOT EXISTS (
 		      SELECT 1 FROM reconciled_matches rm WHERE rm.bank_transaction_id = bt.id
 		  )
@@ -246,8 +251,11 @@ func fetchCandidates(ctx context.Context, tx pgx.Tx, merchantID string, v unreso
 	return candidates, rows.Err()
 }
 
-// buildResolverPrompt renders one vendor row plus its candidates in a stable,
-// plainly-labeled layout so the model can ground every claim in a visible field.
+// buildResolverPrompt renders one vendor row plus its candidates as labeled
+// blocks. For every candidate it pre-computes the three evidence signals the
+// model is asked to reason over - amount_ratio, date_gap_days, and
+// settlement_id_overlap - so Gemini judges stated numbers instead of
+// re-deriving them (imperfectly) from raw narration text.
 func buildResolverPrompt(v unresolvedTxn, candidates []bankCandidate) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "VENDOR TRANSACTION (needs matching)\n")
@@ -259,12 +267,72 @@ func buildResolverPrompt(v unresolvedTxn, candidates []bankCandidate) string {
 		fmt.Fprintf(&b, "- prior deterministic pass note: %s\n", v.PriorReasoning)
 	}
 
+	sid := derefStr(v.SettlementID)
+
 	fmt.Fprintf(&b, "\nCANDIDATE BANK CREDITS (%d)\n", len(candidates))
 	for i, c := range candidates {
-		fmt.Fprintf(&b, "%d. id: %s | amount: %.2f | txn_date: %s | utr: %s | narration: %q\n",
-			i+1, c.ID, c.Amount, c.TxnDate.Format("2006-01-02 15:04"), c.UTRNumber, c.Narration)
+		fmt.Fprintf(&b, "\n%d. Candidate:\n", i+1)
+		fmt.Fprintf(&b, "   - id: %s\n", c.ID)
+		fmt.Fprintf(&b, "   - amount: %.2f\n", c.Amount)
+		fmt.Fprintf(&b, "   - txn_date: %s\n", c.TxnDate.Format("2006-01-02 15:04"))
+		fmt.Fprintf(&b, "   - utr: %s\n", c.UTRNumber)
+		fmt.Fprintf(&b, "   - narration: %q\n", c.Narration)
+
+		if v.Amount != 0 {
+			fmt.Fprintf(&b, "   - amount_ratio (bank/vendor, ~0.98 expected for typical 2%% platform fee): %.4f\n",
+				c.Amount/v.Amount)
+		} else {
+			fmt.Fprintf(&b, "   - amount_ratio (bank/vendor): n/a\n")
+		}
+
+		fmt.Fprintf(&b, "   - date_gap_days: %d\n", dateGapDays(v.SettlementDate, &c.TxnDate))
+
+		if sid != "" && sid != "(none)" {
+			fmt.Fprintf(&b, "   - settlement_id_overlap: %d of %d characters matched\n",
+				longestPrefixOverlap(sid, c.Narration), len(sid))
+		} else {
+			fmt.Fprintf(&b, "   - settlement_id_overlap: n/a (vendor has no settlement_id)\n")
+		}
 	}
 	return b.String()
+}
+
+// dateGapDays returns the whole-day distance between two timestamps, rounded
+// to the nearest day so a 23:45 -> 01:15 overnight bleed reads as 1 day.
+func dateGapDays(a, b *time.Time) int {
+	if a == nil || b == nil {
+		return -1 // unknown; the model should weigh other signals instead
+	}
+	gap := a.Sub(*b)
+	if gap < 0 {
+		gap = -gap
+	}
+	return int(math.Round(gap.Hours() / 24))
+}
+
+// longestPrefixOverlap is a deliberately simple overlap proxy: anchored at the
+// settlement_id's first character, it finds the longest run of consecutive ID
+// characters appearing anywhere in the text. Bank truncation cuts the TAIL of
+// narrations, so true counterparts keep an unbroken prefix of the ID - exactly
+// what this measures. Returns the character count; compare against len(id).
+func longestPrefixOverlap(id, text string) int {
+	if id == "" || text == "" {
+		return 0
+	}
+	best := 0
+	for i := 0; i < len(text); i++ {
+		if text[i] != id[0] {
+			continue
+		}
+		n := 0
+		for n < len(id) && i+n < len(text) && text[i+n] == id[n] {
+			n++
+		}
+		if n > best {
+			best = n
+		}
+	}
+	return best
 }
 
 // writeAuditRow records an 'unresolved' decision in the audit trail. A nil
