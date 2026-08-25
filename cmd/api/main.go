@@ -77,14 +77,14 @@ func main() {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "merchant_id is required"})
 		}
 
-		matches, err := reconciliation.RunDailyReconciliation(req.MerchantID, db.Pool)
+		result, err := reconciliation.RunDailyReconciliation(req.MerchantID, db.Pool)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "reconciliation failed", "details": err.Error()})
 		}
 
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			"message": "Reconciliation complete",
-			"matches_found": matches,
+			"result":  result,
 		})
 	})
 
