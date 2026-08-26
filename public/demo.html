@@ -410,6 +410,16 @@
             color: #60a5fa;
         }
 
+        .chip-unresolved {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--error);
+        }
+
+        .chip:not(.chip-deterministic):not(.chip-agent):not(.chip-unresolved) {
+            background: rgba(148, 163, 184, 0.15);
+            color: var(--text-muted);
+        }
+
         .conf { font-weight: 600; }
 
         .toast-container {
@@ -747,7 +757,11 @@
                 tpNote.innerText = "Run reconciliation to see throughput";
             }
 
-            document.getElementById('stat-exceptions').innerText = data.exception_count ?? data.pending_transactions.length;
+            // Use exception_count directly; no silent fallback to pending_transactions.length.
+        // The two numbers measure different things (capped exception list vs all UNMATCHED
+        // rows) and diverging would show two conflicting "exceptions" numbers on the page.
+        document.getElementById('stat-exceptions').innerText =
+            data.exception_count != null ? data.exception_count : "—";
 
             // Method breakdown bar + labels. Zero-total keeps all segments at 0
             // width and shows an honest empty track instead of fake data.
@@ -814,7 +828,7 @@
             try {
                 await refreshDashboard(false, false);
 
-                if (!lastDashboard || !lastDashboard.total_expected_funds) {
+                if (!lastDashboard || !lastDashboard.pending_transactions || lastDashboard.pending_transactions.length === 0) {
                     showToast("No transactions found. Generate synthetic data first: go run ./cmd/seedgen", "error");
                 } else {
                     const unmatched = lastDashboard.pending_transactions.length;
