@@ -4,26 +4,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PassCheck FIU - Reconciliation Engine Demo</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0f172a;
-            --panel-bg: rgba(30, 41, 59, 0.6);
-            --border-color: rgba(255, 255, 255, 0.1);
-            --accent: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.5);
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --success: #10b981;
-            --error: #ef4444;
-            --warning: #f59e0b;
+            --bg-color: #1C1B29;
+            --panel-bg: rgba(247, 245, 240, 0.04);
+            --border-color: rgba(247, 245, 240, 0.12);
+            --accent: #B8860B;
+            --accent-glow: rgba(184, 134, 11, 0.18);
+            --text-main: #F7F5F0;
+            --text-muted: #A8A094;
+            --success: #1E5C3A;
+            --error: #8B1E1E;
+            --warning: #B8860B;
+            --font-mono: 'JetBrains Mono', monospace;
+            --font-display: 'Fraunces', serif;
+            --font-body: 'Inter', sans-serif;
         }
 
         body {
             margin: 0;
             padding: 0;
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, var(--bg-color), #020617);
+            font-family: var(--font-body);
+            background: var(--bg-color);
             color: var(--text-main);
             min-height: 100vh;
             display: flex;
@@ -32,7 +35,7 @@
 
         header {
             padding: 1.5rem 2rem;
-            background: rgba(15, 23, 42, 0.8);
+            background: rgba(28, 27, 41, 0.8);
             backdrop-filter: blur(12px);
             border-bottom: 1px solid var(--border-color);
             display: flex;
@@ -46,10 +49,9 @@
         header h1 {
             margin: 0;
             font-size: 1.75rem;
-            font-weight: 800;
-            background: linear-gradient(to right, #60a5fa, #a78bfa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+            font-family: var(--font-display);
+            color: var(--text-main);
             letter-spacing: -0.02em;
         }
 
@@ -59,15 +61,15 @@
         }
 
         .btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(247, 245, 240, 0.06);
+            border: 1px solid var(--border-color);
             color: var(--text-main);
             padding: 0.75rem 1.5rem;
             border-radius: 9999px;
-            font-family: 'Inter', sans-serif;
-            font-weight: 600;
+            font-family: var(--font-body);
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             backdrop-filter: blur(4px);
             display: flex;
             align-items: center;
@@ -75,19 +77,19 @@
         }
 
         .btn:hover {
-            background: rgba(255, 255, 255, 0.1);
-            transform: translateY(-2px);
+            background: rgba(247, 245, 240, 0.12);
+            transform: translateY(-1px);
         }
 
         .btn.primary {
             background: var(--accent);
             border-color: var(--accent);
-            box-shadow: 0 0 15px var(--accent-glow);
+            color: #1C1B29;
         }
 
         .btn.primary:hover {
-            background: #2563eb;
-            box-shadow: 0 0 25px var(--accent-glow);
+            background: #A0750A;
+            box-shadow: 0 0 12px var(--accent-glow);
         }
 
         main {
@@ -113,40 +115,31 @@
             border-radius: 1.5rem;
             padding: 2rem;
             backdrop-filter: blur(16px);
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
             position: relative;
             overflow: hidden;
         }
 
-        .metric-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            height: 4px;
-            background: var(--accent);
-        }
-
-        .metric-card.success::before { background: var(--success); }
-        .metric-card.warning::before { background: var(--warning); }
-
         .metric-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
+            transform: translateY(-3px);
+            box-shadow: 0 16px 32px -12px rgba(0, 0, 0, 0.4);
+            border-color: rgba(247, 245, 240, 0.2);
         }
 
         .metric-title {
-            font-size: 0.875rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.08em;
             color: var(--text-muted);
-            font-weight: 600;
+            font-weight: 500;
             margin-bottom: 0.5rem;
         }
 
         .metric-value {
-            font-size: 3rem;
-            font-weight: 800;
+            font-size: 2.75rem;
+            font-weight: 700;
+            font-family: var(--font-display);
             margin: 0;
             display: flex;
             align-items: baseline;
@@ -154,12 +147,16 @@
         }
 
         .currency {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
+            font-family: var(--font-mono);
+            font-variant-numeric: tabular-nums;
             color: var(--text-muted);
         }
         
         .value-number {
-            transition: color 0.3s;
+            transition: color 0.2s;
+            font-family: var(--font-mono);
+            font-variant-numeric: tabular-nums;
         }
 
         .metric-card.success .metric-value { color: var(--success); }
@@ -170,7 +167,7 @@
             border: 1px solid var(--border-color);
             border-radius: 1.5rem;
             backdrop-filter: blur(16px);
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
             overflow: hidden;
         }
 
@@ -184,16 +181,17 @@
 
         .table-header h2 {
             margin: 0;
-            font-size: 1.25rem;
-            font-weight: 600;
+            font-size: 1.125rem;
+            font-weight: 700;
+            font-family: var(--font-display);
         }
         
         .badge {
-            background: rgba(245, 158, 11, 0.2);
-            color: var(--warning);
+            background: rgba(184, 134, 11, 0.15);
+            color: var(--accent);
             padding: 0.25rem 0.75rem;
             border-radius: 9999px;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 600;
             letter-spacing: 0.05em;
         }
@@ -204,42 +202,45 @@
         }
 
         th, td {
-            padding: 1.25rem 2rem;
+            padding: 1rem 1.5rem;
             text-align: left;
         }
 
         th {
             color: var(--text-muted);
             font-weight: 600;
-            font-size: 0.875rem;
+            font-size: 0.7rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid var(--border-color);
         }
 
         td {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid var(--border-color);
             font-variant-numeric: tabular-nums;
         }
 
         tbody tr {
-            transition: all 0.3s ease;
+            transition: background 0.2s ease;
         }
 
         tbody tr:hover {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(247, 245, 240, 0.02);
         }
         
         .utr {
-            font-family: monospace;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 0.25rem 0.5rem;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            background: rgba(247, 245, 240, 0.06);
+            padding: 0.2rem 0.5rem;
             border-radius: 0.25rem;
-            color: #a78bfa;
+            color: var(--text-main);
         }
         
         .amount {
             font-weight: 600;
+            font-family: var(--font-mono);
+            font-variant-numeric: tabular-nums;
         }
         
         .row-leave {
@@ -269,18 +270,18 @@
         }
         
         @keyframes pulseGlow {
-            0% { box-shadow: 0 0 15px var(--accent-glow); }
-            50% { box-shadow: 0 0 30px var(--accent-glow); }
-            100% { box-shadow: 0 0 15px var(--accent-glow); }
+            0% { box-shadow: 0 0 8px var(--accent-glow); }
+            50% { box-shadow: 0 0 16px var(--accent-glow); }
+            100% { box-shadow: 0 0 8px var(--accent-glow); }
         }
 
         .loader {
             display: inline-block;
             width: 1rem;
             height: 1rem;
-            border: 2px solid rgba(255,255,255,0.3);
+            border: 2px solid rgba(247, 245, 240, 0.3);
             border-radius: 50%;
-            border-top-color: #fff;
+            border-top-color: var(--text-main);
             animation: spin 1s ease-in-out infinite;
             display: none;
         }
@@ -305,7 +306,8 @@
 
         .stat-number {
             font-size: 2rem;
-            font-weight: 800;
+            font-weight: 700;
+            font-family: var(--font-display);
             font-variant-numeric: tabular-nums;
             color: var(--text-main);
         }
@@ -323,11 +325,11 @@
 
         .method-bar {
             display: flex;
-            height: 14px;
+            height: 12px;
             margin: 0 2rem;
             border-radius: 9999px;
             overflow: hidden;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(247, 245, 240, 0.06);
         }
 
         .method-bar .seg {
@@ -342,17 +344,17 @@
         .method-labels {
             display: flex;
             justify-content: space-between;
-            padding: 0.85rem 2rem 1.5rem;
-            font-size: 0.85rem;
+            padding: 0.75rem 2rem 1.5rem;
+            font-size: 0.75rem;
             color: var(--text-muted);
         }
 
-        .method-labels b { color: var(--text-main); }
+        .method-labels b { color: var(--text-main); font-weight: 600; }
 
         .dot {
             display: inline-block;
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             margin-right: 0.4rem;
         }
@@ -368,7 +370,7 @@
             padding: 1rem 2rem 1.5rem;
             display: flex;
             flex-direction: column;
-            gap: 0.6rem;
+            gap: 0.5rem;
         }
 
         .audit-row {
@@ -376,7 +378,12 @@
             border: 1px solid var(--border-color);
             border-radius: 0.5rem;
             font-size: 0.85rem;
+            border-left: 3px solid transparent;
         }
+
+        .audit-row.deterministic { border-left-color: var(--success); }
+        .audit-row.agent { border-left-color: var(--accent); }
+        .audit-row.unresolved { border-left-color: var(--error); }
 
         .audit-row .row-head {
             display: flex;
@@ -394,33 +401,247 @@
         .chip {
             padding: 0.15rem 0.6rem;
             border-radius: 9999px;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             font-weight: 600;
             letter-spacing: 0.05em;
             text-transform: uppercase;
+            font-family: var(--font-body);
         }
 
         .chip-deterministic {
-            background: rgba(16, 185, 129, 0.15);
+            background: rgba(30, 92, 58, 0.2);
             color: var(--success);
         }
 
         .chip-agent {
-            background: rgba(59, 130, 246, 0.15);
-            color: #60a5fa;
+            background: rgba(184, 134, 11, 0.2);
+            color: var(--accent);
         }
 
         .chip-unresolved {
-            background: rgba(239, 68, 68, 0.15);
+            background: rgba(139, 30, 30, 0.2);
             color: var(--error);
         }
 
         .chip:not(.chip-deterministic):not(.chip-agent):not(.chip-unresolved) {
-            background: rgba(148, 163, 184, 0.15);
+            background: rgba(168, 160, 148, 0.15);
             color: var(--text-muted);
         }
 
-        .conf { font-weight: 600; }
+        /* --- Full reconciliation records table --- */
+        .records-table-container {
+            overflow-x: auto;
+        }
+
+        .records-filters {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .filter-group label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .filter-select {
+            background: rgba(247, 245, 240, 0.06);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-family: var(--font-body);
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .btn-secondary {
+            background: rgba(247, 245, 240, 0.06);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-family: var(--font-body);
+            font-weight: 500;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(247, 245, 240, 0.12);
+        }
+
+        .records-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        .records-table th,
+        .records-table td {
+            padding: 0.875rem 1.25rem;
+            text-align: left;
+        }
+
+        .records-table th {
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        .records-table td {
+            border-bottom: 1px solid var(--border-color);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .records-table tbody tr {
+            transition: background 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .records-table tbody tr:hover {
+            background: rgba(247, 245, 240, 0.02);
+        }
+
+        .records-table tbody tr.deterministic { border-left-color: var(--success); }
+        .records-table tbody tr.agent { border-left-color: var(--accent); }
+        .records-table tbody tr.unresolved { border-left-color: var(--error); }
+
+        .truncated {
+            max-width: 160px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .truncated[title] {
+            cursor: help;
+        }
+
+        .amount-right {
+            text-align: right;
+            font-weight: 600;
+            font-family: var(--font-mono);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .reasoning-wrap {
+            max-width: 400px;
+            white-space: normal;
+            word-wrap: break-word;
+            line-height: 1.5;
+            color: var(--text-muted);
+        }
+
+        .status-badge {
+            padding: 0.2rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+
+        .status-matched {
+            background: rgba(30, 92, 58, 0.2);
+            color: var(--success);
+        }
+
+        .status-unmatched {
+            background: rgba(139, 30, 30, 0.2);
+            color: var(--error);
+        }
+
+        .confidence-cell {
+            font-weight: 600;
+            font-family: var(--font-mono);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .pagination-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.25rem 2rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .pagination-btn {
+            background: rgba(247, 245, 240, 0.06);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-family: var(--font-body);
+            font-weight: 500;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .pagination-btn:hover:not(:disabled) {
+            background: rgba(247, 245, 240, 0.12);
+        }
+
+        .pagination-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .pagination-info {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .load-records-trigger {
+            padding: 1.5rem 2rem;
+            text-align: center;
+            border-top: 1px solid var(--border-color);
+            background: rgba(247, 245, 240, 0.02);
+        }
+
+        .load-records-btn {
+            background: var(--accent);
+            border: none;
+            color: #1C1B29;
+            padding: 0.75rem 2rem;
+            border-radius: 9999px;
+            font-family: var(--font-body);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .load-records-btn:hover {
+            background: #A0750A;
+            box-shadow: 0 0 12px var(--accent-glow);
+        }
 
         .toast-container {
             position: fixed;
@@ -438,7 +659,7 @@
             border: 1px solid var(--border-color);
             padding: 1rem 1.5rem;
             border-radius: 0.75rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
             display: flex;
             align-items: center;
             gap: 0.75rem;
@@ -584,7 +805,62 @@
                 <div class="empty-state">No reconciliation decisions yet.</div>
             </div>
         </div>
-    </main>
+
+        <div class="table-container" id="records-section">
+            <div class="table-header">
+                <h2>Full Reconciliation Records</h2>
+                <div class="badge" id="records-badge">0 RECORDS</div>
+            </div>
+            <div class="records-table-container" id="records-table-wrapper" style="display: none;">
+                <div class="records-filters">
+                    <div class="filter-group">
+                        <label for="filter-status">Status</label>
+                        <select class="filter-select" id="filter-status" onchange="onRecordsFilterChange()">
+                            <option value="">All</option>
+                            <option value="MATCHED">Matched</option>
+                            <option value="UNMATCHED">Unmatched</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filter-method">Method</label>
+                        <select class="filter-select" id="filter-method" onchange="onRecordsFilterChange()">
+                            <option value="">All</option>
+                            <option value="deterministic">Deterministic</option>
+                            <option value="agent">Agent</option>
+                            <option value="unresolved">Unresolved</option>
+                        </select>
+                    </div>
+                    <button class="btn-secondary" id="btn-export-csv" onclick="exportRecordsCSV()" style="margin-left: auto;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Export CSV
+                    </button>
+                </div>
+                <table class="records-table">
+                    <thead>
+                        <tr>
+                            <th>Transaction ID</th>
+                            <th>Amount</th>
+                            <th>Settlement ID</th>
+                            <th>Status</th>
+                            <th>Method</th>
+                            <th>Confidence</th>
+                            <th>Reasoning</th>
+                        </tr>
+                    </thead>
+                    <tbody id="records-table-body">
+                    </tbody>
+                </table>
+                <div class="pagination-controls" id="records-pagination" style="display: none;">
+                    <button class="pagination-btn" id="records-prev" onclick="onRecordsPageChange(-1)" disabled>Previous</button>
+                    <span class="pagination-info" id="records-page-info">Page 1 of 1</span>
+                    <button class="pagination-btn" id="records-next" onclick="onRecordsPageChange(1)" disabled>Next</button>
+                </div>
+            </div>
+            <div class="load-records-trigger" id="records-load-trigger">
+                <button class="load-records-btn" onclick="loadRecords()">Load Full Records</button>
+                <p style="margin: 0.75rem 0 0; font-size: 0.85rem; color: var(--text-muted);">Click to load the complete reconciliation audit trail with pagination, filters, and CSV export.</p>
+            </div>
+        </div>
 
     <div class="toast-container" id="toast-container"></div>
 
@@ -784,7 +1060,7 @@
             }
 
             listEl.innerHTML = exceptions.map(e => `
-                <div class="audit-row">
+                <div class="audit-row unresolved">
                     <div class="row-head">
                         <span class="utr">${e.vendor_txn_id}</span>
                         <span class="amount">₹${formatCurrency(e.amount)}</span>
@@ -804,7 +1080,7 @@
             }
 
             listEl.innerHTML = matches.map(m => `
-                <div class="audit-row">
+                <div class="audit-row ${m.method}">
                     <div class="row-head">
                         <span class="chip chip-${m.method}">${m.method}</span>
                         <span class="conf">${(m.confidence * 100).toFixed(0)}% confidence</span>
@@ -912,6 +1188,142 @@
                 btn.style.pointerEvents = 'auto';
                 loader.style.display = 'none';
             }
+        };
+
+        // --- Full Reconciliation Records ---
+        let recordsState = {
+            currentPage: 1,
+            pageSize: 25,
+            totalPages: 1,
+            totalCount: 0,
+            statusFilter: '',
+            methodFilter: '',
+            loaded: false
+        };
+
+        const loadRecords = async () => {
+            if (recordsState.loaded) return;
+            
+            const trigger = document.getElementById('records-load-trigger');
+            const wrapper = document.getElementById('records-table-wrapper');
+            const btn = trigger.querySelector('.load-records-btn');
+            
+            btn.disabled = true;
+            btn.innerHTML = `
+                <span class="loader" style="display: inline-block; margin-right: 0.5rem;"></span>
+                Loading...
+            `;
+
+            try {
+                await fetchRecords();
+                trigger.style.display = 'none';
+                wrapper.style.display = 'block';
+                recordsState.loaded = true;
+            } catch (err) {
+                showToast("Failed to load records: " + err.message, "error");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Load Full Records';
+            }
+        };
+
+        const fetchRecords = async () => {
+            const params = new URLSearchParams({
+                page: recordsState.currentPage,
+                page_size: recordsState.pageSize
+            });
+            if (recordsState.statusFilter) params.set('status', recordsState.statusFilter);
+            if (recordsState.methodFilter) params.set('method', recordsState.methodFilter);
+
+            const res = await fetch(`/api/v1/demo/records/${merchantId}?${params.toString()}`);
+            const data = await res.json();
+            
+            if (!res.ok) throw new Error(data.error || "Failed to fetch records");
+
+            recordsState.totalPages = data.total_pages;
+            recordsState.totalCount = data.total_count;
+            
+            renderRecords(data.records);
+            updateRecordsPagination();
+            updateRecordsBadge();
+        };
+
+        const renderRecords = (records) => {
+            const tbody = document.getElementById('records-table-body');
+            
+            if (!records || records.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" style="padding: 3rem; text-align: center; color: var(--text-muted);">No records found for the current filters.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = records.map(r => `
+                <tr class="${r.method || ''}">
+                    <td>
+                        <span class="truncated utr" title="${r.vendor_txn_id}">${r.vendor_txn_id}</span>
+                    </td>
+                    <td class="amount-right">₹${formatCurrency(r.amount)}</td>
+                    <td>
+                        ${r.settlement_id ? `<span class="truncated utr" title="${r.settlement_id}">${r.settlement_id}</span>` : '<span style="color: var(--text-muted);">—</span>'}
+                    </td>
+                    <td>
+                        <span class="status-badge ${r.recon_status === 'MATCHED' ? 'status-matched' : 'status-unmatched'}">${r.recon_status}</span>
+                    </td>
+                    <td>
+                        ${r.method ? `<span class="chip chip-${r.method}">${r.method}</span>` : '<span style="color: var(--text-muted);">—</span>'}
+                    </td>
+                    <td class="confidence-cell">
+                        ${r.confidence != null ? (r.confidence * 100).toFixed(0) + '%' : '—'}
+                    </td>
+                    <td>
+                        <span class="reasoning-wrap">${r.reasoning || '—'}</span>
+                    </td>
+                </tr>
+            `).join('');
+        };
+
+        const updateRecordsPagination = () => {
+            const prevBtn = document.getElementById('records-prev');
+            const nextBtn = document.getElementById('records-next');
+            const pageInfo = document.getElementById('records-page-info');
+            const pagination = document.getElementById('records-pagination');
+
+            if (recordsState.totalPages <= 1) {
+                pagination.style.display = 'none';
+            } else {
+                pagination.style.display = 'flex';
+                prevBtn.disabled = recordsState.currentPage <= 1;
+                nextBtn.disabled = recordsState.currentPage >= recordsState.totalPages;
+                pageInfo.innerText = `Page ${recordsState.currentPage} of ${recordsState.totalPages}`;
+            }
+        };
+
+        const updateRecordsBadge = () => {
+            document.getElementById('records-badge').innerText = `${recordsState.totalCount} RECORDS`;
+        };
+
+        const onRecordsFilterChange = () => {
+            recordsState.statusFilter = document.getElementById('filter-status').value;
+            recordsState.methodFilter = document.getElementById('filter-method').value;
+            recordsState.currentPage = 1;
+            fetchRecords();
+        };
+
+        const onRecordsPageChange = (delta) => {
+            const newPage = recordsState.currentPage + delta;
+            if (newPage < 1 || newPage > recordsState.totalPages) return;
+            recordsState.currentPage = newPage;
+            fetchRecords();
+        };
+
+        const exportRecordsCSV = () => {
+            const params = new URLSearchParams({
+                format: 'csv'
+            });
+            if (recordsState.statusFilter) params.set('status', recordsState.statusFilter);
+            if (recordsState.methodFilter) params.set('method', recordsState.methodFilter);
+            
+            const url = `/api/v1/demo/records/${merchantId}?${params.toString()}`;
+            window.location.href = url;
         };
 
         // Initialize
