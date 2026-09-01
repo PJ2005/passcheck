@@ -173,6 +173,7 @@ func main() {
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Mock data seeded successfully!"})
 	})
 	demoGroup.Get("/dashboard/:merchantId", demo.GetReconciliationDashboard(db.Pool))
+	demoGroup.Get("/records/:merchantId", demo.GetReconciliationRecords(db.Pool))
 
 	// 6. Support Graceful Shutdown
 	port := os.Getenv("PORT")
