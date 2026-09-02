@@ -57,9 +57,16 @@ func main() {
 	app.Use(recover.New())
 	app.Use(logger.New())
 
-	// Serve static files
-	app.Static("/", "./public")
-	app.Static("/demo", "./public/demo.html")
+	// Demo is the primary UI — serve it at both "/" and "/demo" so the
+	// root URL opens the reconciliation dashboard directly (no separate
+	// “API Tester” landing page). Static serving of the whole ./public
+	// directory is intentionally removed to avoid exposing index.html.
+	app.Get("/", func(c *fiber.Ctx) error {
+		return c.SendFile("./public/demo.html")
+	})
+	app.Get("/demo", func(c *fiber.Ctx) error {
+		return c.SendFile("./public/demo.html")
+	})
 
 	// 5. Expose routes
 	app.Get("/api/v1/health", func(c *fiber.Ctx) error {
@@ -151,26 +158,6 @@ func main() {
 			"merchant_id": merchantID,
 			"provider_id": providerID,
 		})
-	})
-	demoGroup.Post("/seed", func(c *fiber.Ctx) error {
-		type SeedRequest struct {
-			MerchantID string `json:"merchant_id"`
-			ProviderID string `json:"provider_id"`
-		}
-		var req SeedRequest
-		if err := c.BodyParser(&req); err != nil {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid json"})
-		}
-		if req.MerchantID == "" || req.ProviderID == "" {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "merchant_id and provider_id are required"})
-		}
-
-		err := demo.SeedMockRazorpayData(context.Background(), db.Pool, req.MerchantID, req.ProviderID)
-		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "seeding failed", "details": err.Error()})
-		}
-
-		return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "Mock data seeded successfully!"})
 	})
 	demoGroup.Get("/dashboard/:merchantId", demo.GetReconciliationDashboard(db.Pool))
 	demoGroup.Get("/records/:merchantId", demo.GetReconciliationRecords(db.Pool))

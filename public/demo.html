@@ -3,534 +3,871 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PassCheck FIU - Reconciliation Engine Demo</title>
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,700;9..144,900&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <title>PassCheck — Reconciliation Control Center</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #1C1B29;
-            --panel-bg: rgba(247, 245, 240, 0.04);
-            --border-color: rgba(247, 245, 240, 0.12);
-            --accent: #B8860B;
-            --accent-glow: rgba(184, 134, 11, 0.18);
-            --text-main: #F7F5F0;
-            --text-muted: #A8A094;
-            --success: #1E5C3A;
-            --error: #8B1E1E;
-            --warning: #B8860B;
-            --font-mono: 'JetBrains Mono', monospace;
-            --font-display: 'Fraunces', serif;
-            --font-body: 'Inter', sans-serif;
+            --bg: #F8FAFC;
+            --surface: #FFFFFF;
+            --surface-muted: #F1F5F9;
+            --surface-hover: #F8FAFC;
+            --border: #E2E8F0;
+            --border-strong: #CBD5E1;
+            --text: #0F172A;
+            --text-secondary: #334155;
+            --muted: #64748B;
+            --faint: #94A3B8;
+            --primary: #2563EB;
+            --primary-hover: #1D4ED8;
+            --primary-light: #EFF6FF;
+            --primary-border: #BFDBFE;
+            --success: #0F766E;
+            --success-bg: #ECFDF5;
+            --success-border: #6EE7B7;
+            --error: #BE123C;
+            --error-bg: #FFF1F2;
+            --error-border: #FECDD3;
+            --warning: #B45309;
+            --warning-bg: #FFFBEB;
+            --warning-border: #FDE68A;
+            --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', ui-monospace, monospace;
         }
+
+        * { box-sizing: border-box; }
 
         body {
             margin: 0;
             padding: 0;
             font-family: var(--font-body);
-            background: var(--bg-color);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
         }
 
+        /* Header — clean, no blur, no gradient */
         header {
-            padding: 1.5rem 2rem;
-            background: rgba(28, 27, 41, 0.8);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border-color);
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 24px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
+            gap: 24px;
             position: sticky;
             top: 0;
             z-index: 100;
         }
 
-        header h1 {
-            margin: 0;
-            font-size: 1.75rem;
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .brand-mark {
+            width: 36px;
+            height: 36px;
+            background: var(--text);
+            color: white;
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
             font-weight: 700;
-            font-family: var(--font-display);
-            color: var(--text-main);
+            font-size: 14px;
             letter-spacing: -0.02em;
+            flex-shrink: 0;
+        }
+
+        .brand-text {
+            line-height: 1.1;
+        }
+
+        .brand-title {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text);
+        }
+
+        .brand-subtitle {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--muted);
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        .header-center {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        .merchant-pill {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            font-weight: 500;
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            border-radius: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 280px;
+        }
+
+        .merchant-pill:empty::before {
+            content: "Loading merchant…";
+            color: var(--faint);
+        }
+
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--success);
+            background: var(--success-bg);
+            border: 1px solid var(--success-border);
+            padding: 5px 9px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--success);
+            border-radius: 50%;
         }
 
         .actions {
             display: flex;
-            gap: 1rem;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
         }
 
         .btn {
-            background: rgba(247, 245, 240, 0.06);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 0.75rem 1.5rem;
-            border-radius: 9999px;
+            appearance: none;
+            border: 1px solid var(--border-strong);
+            background: var(--surface);
+            color: var(--text);
+            padding: 0 14px;
+            height: 36px;
+            border-radius: 8px;
             font-family: var(--font-body);
+            font-size: 13px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s ease;
-            backdrop-filter: blur(4px);
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 7px;
+            white-space: nowrap;
+            transition: background 150ms, border-color 150ms, color 150ms;
         }
 
         .btn:hover {
-            background: rgba(247, 245, 240, 0.12);
-            transform: translateY(-1px);
+            background: var(--surface-muted);
+            border-color: var(--border-strong);
+        }
+
+        .btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
         }
 
         .btn.primary {
-            background: var(--accent);
-            border-color: var(--accent);
-            color: #1C1B29;
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+            font-weight: 600;
         }
 
         .btn.primary:hover {
-            background: #A0750A;
-            box-shadow: 0 0 12px var(--accent-glow);
+            background: var(--primary-hover);
+            border-color: var(--primary-hover);
         }
 
+        .btn svg {
+            flex-shrink: 0;
+        }
+
+        /* Runbook / Stepper */
+        .runbook {
+            max-width: 1200px;
+            margin: 20px auto 0;
+            padding: 0 24px;
+        }
+
+        .runbook-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+        }
+
+        .stepper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .step {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            font-size: 12px;
+            line-height: 1;
+            color: var(--muted);
+        }
+
+        .step-num {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
+            display: grid;
+            place-items: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+
+        .step.active {
+            border-color: var(--primary-border);
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .step.active .step-num {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .step.done {
+            border-color: var(--success-border);
+            background: var(--success-bg);
+            color: var(--success);
+        }
+
+        .step.done .step-num {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .step-label {
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .runbook-hint {
+            font-size: 12px;
+            color: var(--muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            max-width: 420px;
+            line-height: 1.4;
+        }
+
+        .runbook-hint strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        /* Main layout */
         main {
-            padding: 3rem 2rem;
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-            width: 100%;
-            box-sizing: border-box;
+            padding: 20px 24px 40px;
             display: flex;
             flex-direction: column;
-            gap: 3rem;
+            gap: 16px;
         }
 
+        /* KPI grid — compact, no blur, no giant fonts */
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 2rem;
+            gap: 12px;
         }
 
         .metric-card {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 1.5rem;
-            padding: 2rem;
-            backdrop-filter: blur(16px);
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
-            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-            position: relative;
-            overflow: hidden;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 1px 2px rgba(15,23,42,0.04);
         }
 
-        .metric-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 16px 32px -12px rgba(0, 0, 0, 0.4);
-            border-color: rgba(247, 245, 240, 0.2);
+        .metric-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
         }
 
         .metric-title {
-            font-size: 0.75rem;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--text-muted);
-            font-weight: 500;
-            margin-bottom: 0.5rem;
+            color: var(--muted);
+            line-height: 1;
+        }
+
+        .metric-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: grid;
+            place-items: center;
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+
+        .metric-card.success .metric-icon {
+            background: var(--success-bg);
+            border-color: var(--success-border);
+            color: var(--success);
+        }
+
+        .metric-card.warning .metric-icon {
+            background: var(--warning-bg);
+            border-color: var(--warning-border);
+            color: var(--warning);
         }
 
         .metric-value {
-            font-size: 2.75rem;
+            font-size: 26px;
             font-weight: 700;
-            font-family: var(--font-display);
-            margin: 0;
+            letter-spacing: -0.02em;
+            line-height: 1;
             display: flex;
             align-items: baseline;
-            gap: 0.25rem;
-        }
-
-        .currency {
-            font-size: 1.25rem;
-            font-family: var(--font-mono);
-            font-variant-numeric: tabular-nums;
-            color: var(--text-muted);
-        }
-        
-        .value-number {
-            transition: color 0.2s;
-            font-family: var(--font-mono);
+            gap: 6px;
+            color: var(--text);
             font-variant-numeric: tabular-nums;
         }
 
         .metric-card.success .metric-value { color: var(--success); }
-        .metric-card.warning .metric-value { color: var(--warning); }
+        .metric-card.warning .metric-value { color: var(--error); }
 
-        .table-container {
-            background: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 1.5rem;
-            backdrop-filter: blur(16px);
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
+        .currency {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--muted);
+            font-family: var(--font-mono);
         }
 
-        .table-header {
-            padding: 1.5rem 2rem;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .table-header h2 {
-            margin: 0;
-            font-size: 1.125rem;
+        .value-number {
+            font-family: var(--font-mono);
             font-weight: 700;
-            font-family: var(--font-display);
         }
-        
+
+        .metric-foot {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.3;
+            border-top: 1px solid var(--border);
+            padding-top: 8px;
+            margin-top: 2px;
+        }
+
+        .metric-foot strong {
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* Generic card */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+        }
+
+        .card-header {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            background: var(--surface);
+        }
+
+        .card-header h2 {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 650;
+            letter-spacing: -0.01em;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-header h2 svg {
+            color: var(--faint);
+        }
+
         .badge {
-            background: rgba(184, 134, 11, 0.15);
-            color: var(--accent);
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            letter-spacing: 0.05em;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th, td {
-            padding: 1rem 1.5rem;
-            text-align: left;
-        }
-
-        th {
-            color: var(--text-muted);
-            font-weight: 600;
-            font-size: 0.7rem;
+            font-size: 11px;
+            font-weight: 650;
+            letter-spacing: 0.06em;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-            border-bottom: 1px solid var(--border-color);
+            padding: 4px 8px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--surface-muted);
+            color: var(--muted);
+            white-space: nowrap;
         }
 
-        td {
-            border-bottom: 1px solid var(--border-color);
-            font-variant-numeric: tabular-nums;
+        .badge.live {
+            background: var(--primary-light);
+            border-color: var(--primary-border);
+            color: var(--primary);
         }
 
-        tbody tr {
-            transition: background 0.2s ease;
+        .badge.warn {
+            background: var(--warning-bg);
+            border-color: var(--warning-border);
+            color: var(--warning);
         }
 
-        tbody tr:hover {
-            background: rgba(247, 245, 240, 0.02);
-        }
-        
-        .utr {
-            font-family: var(--font-mono);
-            font-size: 0.8rem;
-            background: rgba(247, 245, 240, 0.06);
-            padding: 0.2rem 0.5rem;
-            border-radius: 0.25rem;
-            color: var(--text-main);
-        }
-        
-        .amount {
-            font-weight: 600;
-            font-family: var(--font-mono);
-            font-variant-numeric: tabular-nums;
-        }
-        
-        .row-leave {
-            animation: slideOutRight 0.5s forwards ease-in-out;
-        }
-        
-        .row-enter {
-            animation: slideInLeft 0.5s forwards ease-in-out;
-        }
-
-        @keyframes slideOutRight {
-            to {
-                opacity: 0;
-                transform: translateX(100px);
-            }
-        }
-        
-        @keyframes slideInLeft {
-            from {
-                opacity: 0;
-                transform: translateX(-100px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-        
-        @keyframes pulseGlow {
-            0% { box-shadow: 0 0 8px var(--accent-glow); }
-            50% { box-shadow: 0 0 16px var(--accent-glow); }
-            100% { box-shadow: 0 0 8px var(--accent-glow); }
-        }
-
-        .loader {
-            display: inline-block;
-            width: 1rem;
-            height: 1rem;
-            border: 2px solid rgba(247, 245, 240, 0.3);
-            border-radius: 50%;
-            border-top-color: var(--text-main);
-            animation: spin 1s ease-in-out infinite;
-            display: none;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .empty-state {
-            padding: 4rem;
-            text-align: center;
-            color: var(--text-muted);
-        }
-
-        /* --- Two-tier performance panel --- */
-        .perf-stats {
+        /* Performance specifics */
+        .perf-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 2rem;
-            padding: 2rem;
+            gap: 16px;
+            padding: 16px;
+        }
+
+        .perf-item {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .perf-label {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 6px;
         }
 
         .stat-number {
-            font-size: 2rem;
+            font-size: 22px;
             font-weight: 700;
-            font-family: var(--font-display);
+            letter-spacing: -0.02em;
+            line-height: 1;
+            color: var(--text);
             font-variant-numeric: tabular-nums;
-            color: var(--text-main);
         }
 
         .stat-number.rate { color: var(--success); }
-        .stat-number.exceptions { color: var(--warning); }
+        .stat-number.exceptions { color: var(--error); }
 
         .stat-note {
-            display: block;
-            font-size: 0.7rem;
-            font-weight: 400;
-            color: var(--text-muted);
-            margin-top: 0.35rem;
+            font-size: 11px;
+            color: var(--muted);
+            margin-top: 4px;
+            line-height: 1.3;
         }
 
         .method-bar {
             display: flex;
-            height: 12px;
-            margin: 0 2rem;
-            border-radius: 9999px;
+            height: 8px;
+            margin: 0 16px;
+            border-radius: 999px;
             overflow: hidden;
-            background: rgba(247, 245, 240, 0.06);
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
         }
 
         .method-bar .seg {
             width: 0%;
-            transition: width 0.6s ease;
+            transition: width 400ms ease;
         }
 
         .seg-deterministic { background: var(--success); }
-        .seg-agent { background: var(--accent); }
+        .seg-agent { background: var(--primary); }
         .seg-unresolved { background: var(--error); }
 
         .method-labels {
             display: flex;
-            justify-content: space-between;
-            padding: 0.75rem 2rem 1.5rem;
-            font-size: 0.75rem;
-            color: var(--text-muted);
+            flex-wrap: wrap;
+            gap: 16px;
+            padding: 10px 16px 14px;
+            font-size: 12px;
+            color: var(--muted);
         }
 
-        .method-labels b { color: var(--text-main); font-weight: 600; }
+        .method-labels b {
+            color: var(--text);
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+        }
 
         .dot {
             display: inline-block;
-            width: 8px;
-            height: 8px;
+            width: 7px;
+            height: 7px;
             border-radius: 50%;
-            margin-right: 0.4rem;
+            margin-right: 6px;
+            position: relative;
+            top: -1px;
         }
 
         .dot-success { background: var(--success); }
-        .dot-accent { background: var(--accent); }
+        .dot-accent { background: var(--primary); }
         .dot-error { background: var(--error); }
 
-        /* --- Audit trail lists --- */
+        /* Workspace tabs */
+        .workspace-tabs {
+            display: flex;
+            gap: 2px;
+            padding: 8px 8px 0;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface-muted);
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .workspace-tabs::-webkit-scrollbar { display: none; }
+
+        .tab {
+            appearance: none;
+            border: 1px solid transparent;
+            border-bottom: none;
+            background: transparent;
+            color: var(--muted);
+            padding: 9px 12px;
+            font-family: var(--font-body);
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            top: 1px;
+        }
+
+        .tab:hover {
+            color: var(--text-secondary);
+            background: rgba(255,255,255,0.6);
+        }
+
+        .tab.active {
+            color: var(--text);
+            background: var(--surface);
+            border-color: var(--border);
+            font-weight: 600;
+            box-shadow: 0 -1px 0 var(--surface);
+        }
+
+        .tab-count {
+            font-size: 11px;
+            font-weight: 650;
+            padding: 1px 6px;
+            border-radius: 999px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .tab.active .tab-count {
+            background: var(--text);
+            border-color: var(--text);
+            color: white;
+        }
+
+        .workspace-panels {
+            background: var(--surface);
+        }
+
+        .panel {
+            display: none;
+        }
+
+        .panel.active {
+            display: block;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th, td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        th {
+            background: #F8FAFC;
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        tbody tr:hover {
+            background: #F8FAFC;
+        }
+
+        td {
+            color: var(--text-secondary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .utr {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 500;
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
+            padding: 3px 6px;
+            border-radius: 6px;
+            color: var(--text);
+            white-space: nowrap;
+        }
+
+        .amount {
+            font-family: var(--font-mono);
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+        }
+
+        /* Audit lists */
         .scroll-list {
-            max-height: 340px;
+            max-height: 380px;
             overflow-y: auto;
-            padding: 1rem 2rem 1.5rem;
+            padding: 12px;
             display: flex;
             flex-direction: column;
-            gap: 0.5rem;
+            gap: 8px;
+            background: #FCFDFE;
         }
 
         .audit-row {
-            padding: 0.75rem 1rem;
-            border: 1px solid var(--border-color);
-            border-radius: 0.5rem;
-            font-size: 0.85rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
             border-left: 3px solid transparent;
         }
 
         .audit-row.deterministic { border-left-color: var(--success); }
-        .audit-row.agent { border-left-color: var(--accent); }
+        .audit-row.agent { border-left-color: var(--primary); }
         .audit-row.unresolved { border-left-color: var(--error); }
 
-        .audit-row .row-head {
+        .row-head {
             display: flex;
             flex-wrap: wrap;
-            align-items: baseline;
-            gap: 0.75rem;
-            margin-bottom: 0.35rem;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
         }
 
-        .audit-row .reasoning {
-            color: var(--text-muted);
-            line-height: 1.45;
+        .reasoning {
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text-secondary);
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px 10px;
         }
 
         .chip {
-            padding: 0.15rem 0.6rem;
-            border-radius: 9999px;
-            font-size: 0.65rem;
-            font-weight: 600;
-            letter-spacing: 0.05em;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
             text-transform: uppercase;
-            font-family: var(--font-body);
+            padding: 3px 7px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            display: inline-flex;
+            align-items: center;
+            line-height: 1;
         }
 
         .chip-deterministic {
-            background: rgba(30, 92, 58, 0.2);
+            background: var(--success-bg);
+            border-color: var(--success-border);
             color: var(--success);
         }
 
         .chip-agent {
-            background: rgba(184, 134, 11, 0.2);
-            color: var(--accent);
+            background: var(--primary-light);
+            border-color: var(--primary-border);
+            color: var(--primary);
         }
 
         .chip-unresolved {
-            background: rgba(139, 30, 30, 0.2);
+            background: var(--error-bg);
+            border-color: var(--error-border);
             color: var(--error);
         }
 
         .chip:not(.chip-deterministic):not(.chip-agent):not(.chip-unresolved) {
-            background: rgba(168, 160, 148, 0.15);
-            color: var(--text-muted);
+            background: var(--surface-muted);
+            color: var(--muted);
         }
 
-        /* --- Full reconciliation records table --- */
-        .records-table-container {
-            overflow-x: auto;
+        .conf {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text);
         }
 
-        .records-filters {
+        /* Records table */
+        .records-toolbar {
             display: flex;
-            gap: 1rem;
-            padding: 1rem 2rem;
-            border-bottom: 1px solid var(--border-color);
             flex-wrap: wrap;
+            gap: 10px;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
             align-items: center;
+            background: #FCFDFE;
         }
 
         .filter-group {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
+            gap: 8px;
         }
 
         .filter-group label {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
+            font-size: 11px;
             font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--muted);
         }
 
         .filter-select {
-            background: rgba(247, 245, 240, 0.06);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
+            height: 32px;
+            padding: 0 10px;
+            border: 1px solid var(--border-strong);
+            border-radius: 6px;
+            background: var(--surface);
+            color: var(--text);
             font-family: var(--font-body);
-            font-size: 0.8rem;
-            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
         }
 
         .filter-select:focus {
             outline: none;
-            border-color: var(--accent);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
         }
 
         .btn-secondary {
-            background: rgba(247, 245, 240, 0.06);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
+            height: 32px;
+            padding: 0 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-strong);
+            background: var(--surface);
+            color: var(--text);
             font-family: var(--font-body);
+            font-size: 13px;
             font-weight: 500;
-            font-size: 0.8rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
             cursor: pointer;
-            transition: all 0.2s ease;
         }
 
         .btn-secondary:hover {
-            background: rgba(247, 245, 240, 0.12);
+            background: var(--surface-muted);
         }
 
         .records-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.8rem;
-        }
-
-        .records-table th,
-        .records-table td {
-            padding: 0.875rem 1.25rem;
-            text-align: left;
+            font-size: 12.5px;
         }
 
         .records-table th {
-            color: var(--text-muted);
-            font-weight: 600;
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            border-bottom: 1px solid var(--border-color);
-            white-space: nowrap;
+            font-size: 10.5px;
+            padding: 9px 12px;
         }
 
         .records-table td {
-            border-bottom: 1px solid var(--border-color);
-            font-variant-numeric: tabular-nums;
+            padding: 10px 12px;
         }
 
         .records-table tbody tr {
-            transition: background 0.2s ease;
             border-left: 3px solid transparent;
         }
 
-        .records-table tbody tr:hover {
-            background: rgba(247, 245, 240, 0.02);
-        }
-
         .records-table tbody tr.deterministic { border-left-color: var(--success); }
-        .records-table tbody tr.agent { border-left-color: var(--accent); }
+        .records-table tbody tr.agent { border-left-color: var(--primary); }
         .records-table tbody tr.unresolved { border-left-color: var(--error); }
 
         .truncated {
-            max-width: 160px;
+            max-width: 140px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -538,329 +875,550 @@
             vertical-align: middle;
         }
 
-        .truncated[title] {
-            cursor: help;
-        }
+        .truncated[title] { cursor: help; }
 
         .amount-right {
             text-align: right;
-            font-weight: 600;
             font-family: var(--font-mono);
-            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+            color: var(--text);
         }
 
         .reasoning-wrap {
-            max-width: 400px;
+            max-width: 380px;
             white-space: normal;
             word-wrap: break-word;
-            line-height: 1.5;
-            color: var(--text-muted);
+            line-height: 1.4;
+            color: var(--text-secondary);
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
 
         .status-badge {
-            padding: 0.2rem 0.5rem;
-            border-radius: 9999px;
-            font-size: 0.65rem;
-            font-weight: 600;
-            letter-spacing: 0.05em;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
             text-transform: uppercase;
-            display: inline-block;
+            padding: 3px 7px;
+            border-radius: 999px;
+            border: 1px solid;
+            display: inline-flex;
         }
 
         .status-matched {
-            background: rgba(30, 92, 58, 0.2);
+            background: var(--success-bg);
+            border-color: var(--success-border);
             color: var(--success);
         }
 
         .status-unmatched {
-            background: rgba(139, 30, 30, 0.2);
-            color: var(--error);
+            background: var(--warning-bg);
+            border-color: var(--warning-border);
+            color: var(--warning);
         }
 
         .confidence-cell {
-            font-weight: 600;
             font-family: var(--font-mono);
-            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+            font-size: 12px;
         }
 
         .pagination-controls {
             display: flex;
-            justify-content: center;
             align-items: center;
-            gap: 1rem;
-            padding: 1.25rem 2rem;
-            border-top: 1px solid var(--border-color);
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 14px;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+            flex-wrap: wrap;
         }
 
         .pagination-btn {
-            background: rgba(247, 245, 240, 0.06);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
+            height: 32px;
+            padding: 0 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border-strong);
+            background: var(--surface);
+            color: var(--text);
             font-family: var(--font-body);
+            font-size: 13px;
             font-weight: 500;
-            font-size: 0.8rem;
             cursor: pointer;
-            transition: all 0.2s ease;
         }
 
         .pagination-btn:hover:not(:disabled) {
-            background: rgba(247, 245, 240, 0.12);
+            background: var(--surface-muted);
         }
 
         .pagination-btn:disabled {
-            opacity: 0.4;
+            opacity: 0.45;
             cursor: not-allowed;
         }
 
         .pagination-info {
-            font-size: 0.8rem;
-            color: var(--text-muted);
+            font-size: 13px;
+            color: var(--muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .pagination-info strong {
+            color: var(--text);
         }
 
         .load-records-trigger {
-            padding: 1.5rem 2rem;
+            padding: 28px 16px;
             text-align: center;
-            border-top: 1px solid var(--border-color);
-            background: rgba(247, 245, 240, 0.02);
+            background: var(--surface);
+            border-top: 1px solid var(--border);
         }
 
         .load-records-btn {
-            background: var(--accent);
-            border: none;
-            color: #1C1B29;
-            padding: 0.75rem 2rem;
-            border-radius: 9999px;
+            height: 36px;
+            padding: 0 16px;
+            border-radius: 8px;
+            background: var(--text);
+            color: white;
+            border: 1px solid var(--text);
             font-family: var(--font-body);
+            font-size: 13px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .load-records-btn:hover {
-            background: #A0750A;
-            box-shadow: 0 0 12px var(--accent-glow);
+            background: #1E293B;
         }
 
-        .toast-container {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
+        .helper-text {
+            margin: 8px 0 0;
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+
+        /* Empty state */
+        .empty-state {
+            padding: 36px 16px;
+            text-align: center;
+            color: var(--muted);
             display: flex;
             flex-direction: column;
-            gap: 1rem;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .empty-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
+            display: grid;
+            place-items: center;
+            color: var(--faint);
+        }
+
+        .empty-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .empty-desc {
+            font-size: 12px;
+            color: var(--muted);
+            max-width: 360px;
+            line-height: 1.5;
+        }
+
+        .empty-desc code {
+            font-family: var(--font-mono);
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: 16px;
+            right: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
             z-index: 1000;
+            max-width: min(420px, calc(100vw - 32px));
         }
 
         .toast {
-            background: var(--panel-bg);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border-color);
-            padding: 1rem 1.5rem;
-            border-radius: 0.75rem;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            background: var(--text);
+            color: white;
+            border: 1px solid #1E293B;
+            padding: 12px 14px;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(15,23,42,0.18);
             display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            animation: slideInUp 0.3s forwards, fadeOut 0.3s forwards 4.7s;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 13px;
+            line-height: 1.4;
+            animation: slideIn 200ms ease-out;
         }
 
-        .toast.success { border-left: 4px solid var(--success); }
-        .toast.error { border-left: 4px solid var(--error); }
+        .toast.success {
+            background: #0F172A;
+        }
 
-        @keyframes slideInUp {
-            from { opacity: 0; transform: translateY(20px); }
+        .toast.error {
+            background: #7F1D1D;
+            border-color: #991B1B;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(8px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes fadeOut {
-            to { opacity: 0; transform: translateY(-20px); }
+
+        /* Animations kept */
+        .row-leave { animation: slideOutRight 0.35s forwards ease-in; }
+        .row-enter { animation: slideInLeft 0.35s forwards ease-out; }
+
+        @keyframes slideOutRight {
+            to { opacity: 0; transform: translateX(12px); }
         }
 
+        @keyframes slideInLeft {
+            from { opacity: 0; transform: translateX(-12px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .loader {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.35);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 700ms linear infinite;
+            display: none;
+            flex-shrink: 0;
+        }
+
+        .btn:not(.primary) .loader {
+            border-color: rgba(15,23,42,0.18);
+            border-top-color: var(--text);
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Responsive */
+        @media (max-width: 960px) {
+            header {
+                flex-wrap: wrap;
+                padding: 12px 16px;
+            }
+            .header-center { order: 3; width: 100%; justify-content: flex-start; }
+            .metrics-grid { grid-template-columns: 1fr; }
+            .perf-grid { grid-template-columns: 1fr; }
+            main { padding: 16px; gap: 16px; }
+            .runbook { padding: 0 16px; margin-top: 16px; }
+            .runbook-card { flex-direction: column; align-items: flex-start; }
+        }
+
+        @media (max-width: 640px) {
+            .actions { width: 100%; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+            .actions::-webkit-scrollbar { display: none; }
+            th, td { padding: 8px 10px; }
+        }
     </style>
 </head>
 <body>
     <header>
-        <h1>PassCheck FIU</h1>
+        <div class="brand">
+            <div class="brand-mark">PC</div>
+            <div class="brand-text">
+                <div class="brand-title">PassCheck</div>
+                <div class="brand-subtitle">Reconciliation — FIU Demo</div>
+            </div>
+        </div>
+
+        <div class="header-center">
+            <span id="merchant-pill" class="merchant-pill" title="Merchant ID"></span>
+            <span class="live-indicator"><span class="live-dot"></span> Live • Demo Mode</span>
+        </div>
+
         <div class="actions">
             <button class="btn" id="btn-seed" onclick="checkDataStatus()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <span class="loader" id="loader-seed"></span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                 Check Data
+                <span class="loader" id="loader-seed"></span>
             </button>
             <button class="btn primary" id="btn-reconcile" onclick="runReconciliation()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21v-5h5"/></svg>
-                <span class="loader" id="loader-reconcile"></span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21v-5h5"/></svg>
                 Run Engine
+                <span class="loader" id="loader-reconcile"></span>
             </button>
             <button class="btn primary" id="btn-agent" onclick="runAgentResolution()">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                Run Agent
                 <span class="loader" id="loader-agent"></span>
-                Run Agent Pass
             </button>
         </div>
     </header>
 
+    <div class="runbook">
+        <div class="runbook-card">
+            <ol class="stepper" id="stepper">
+                <li class="step active" data-step="verify"><span class="step-num">1</span><span class="step-label">Verify Data</span></li>
+                <li class="step" data-step="engine"><span class="step-num">2</span><span class="step-label">Deterministic Engine</span></li>
+                <li class="step" data-step="agent"><span class="step-num">3</span><span class="step-label">Agent Review</span></li>
+                <li class="step" data-step="export"><span class="step-num">4</span><span class="step-label">Export & Audit</span></li>
+            </ol>
+            <div class="runbook-hint" id="runbook-hint">
+                <span>Start with <strong>Check Data</strong> to confirm seeded transactions are loaded.</span>
+            </div>
+        </div>
+    </div>
+
     <main>
+        <!-- KPI row -->
         <div class="metrics-grid">
             <div class="metric-card">
-                <div class="metric-title">Expected Vendor Funds</div>
+                <div class="metric-head">
+                    <div class="metric-title">Expected — Vendor Ledger</div>
+                    <div class="metric-icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                    </div>
+                </div>
                 <div class="metric-value">
                     <span class="currency">₹</span>
                     <span class="value-number" id="val-expected">0.00</span>
                 </div>
+                <div class="metric-foot" id="foot-expected">Total gross from vendor settlements • seed with <code>go run ./cmd/seedgen</code></div>
             </div>
+
             <div class="metric-card success">
-                <div class="metric-title">Verified in Bank (Matched)</div>
+                <div class="metric-head">
+                    <div class="metric-title">Verified — Bank Settled</div>
+                    <div class="metric-icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+                    </div>
+                </div>
                 <div class="metric-value">
                     <span class="currency">₹</span>
                     <span class="value-number" id="val-settled">0.00</span>
                 </div>
+                <div class="metric-foot" id="foot-settled">Matched by settlement_id / UTR + amount • audited in reconciliation_log</div>
             </div>
+
             <div class="metric-card warning">
-                <div class="metric-title">Missing Funds (Pending)</div>
+                <div class="metric-head">
+                    <div class="metric-title">Requires Attention — Pending</div>
+                    <div class="metric-icon">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    </div>
+                </div>
                 <div class="metric-value">
                     <span class="currency">₹</span>
                     <span class="value-number" id="val-pending">0.00</span>
                 </div>
+                <div class="metric-foot"><span id="pending-count-foot">0 transactions</span> pending • check <strong>Pending</strong> tab below</div>
             </div>
         </div>
 
-        <div class="table-container">
-            <div class="table-header">
-                <h2>Reconciliation Performance</h2>
-                <div class="badge">TWO-TIER SYSTEM</div>
+        <!-- Performance -->
+        <div class="card">
+            <div class="card-header">
+                <h2>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    Reconciliation Health
+                </h2>
+                <span class="badge live">Two-Tier • Deterministic + Agent</span>
             </div>
-            <div class="perf-stats">
-                <div>
-                    <div class="metric-title">Match Rate</div>
+
+            <div class="perf-grid">
+                <div class="perf-item">
+                    <div class="perf-label">Match Rate</div>
                     <div class="stat-number rate" id="stat-match-rate">—</div>
-                    <span class="stat-note">(deterministic + agent) / total decisions</span>
+                    <div class="stat-note">(deterministic + agent) ÷ audited decisions</div>
                 </div>
-                <div>
-                    <div class="metric-title">Throughput</div>
+                <div class="perf-item">
+                    <div class="perf-label">Throughput</div>
                     <div class="stat-number" id="stat-throughput">—</div>
-                    <span class="stat-note" id="stat-throughput-note">Run reconciliation to see throughput</span>
+                    <div class="stat-note" id="stat-throughput-note">Run the engine to measure</div>
                 </div>
-                <div>
-                    <div class="metric-title">Exceptions Remaining</div>
+                <div class="perf-item">
+                    <div class="perf-label">Exceptions Remaining</div>
                     <div class="stat-number exceptions" id="stat-exceptions">—</div>
-                    <span class="stat-note">unresolved after both passes</span>
+                    <div class="stat-note">Still requiring review after both passes</div>
                 </div>
             </div>
-            <div class="method-bar" title="Share of audit-trail decisions by method">
+
+            <div class="method-bar" title="Share of decisions by method">
                 <div class="seg seg-deterministic" id="seg-deterministic"></div>
                 <div class="seg seg-agent" id="seg-agent"></div>
                 <div class="seg seg-unresolved" id="seg-unresolved"></div>
             </div>
             <div class="method-labels">
-                <span><i class="dot dot-success"></i>Deterministic: <b id="lbl-deterministic">0</b></span>
-                <span><i class="dot dot-accent"></i>Agent: <b id="lbl-agent">0</b></span>
-                <span><i class="dot dot-error"></i>Unresolved: <b id="lbl-unresolved">0</b></span>
+                <span><i class="dot dot-success"></i>Deterministic <b id="lbl-deterministic">0</b></span>
+                <span><i class="dot dot-accent"></i>Agent <b id="lbl-agent">0</b></span>
+                <span><i class="dot dot-error"></i>Unresolved <b id="lbl-unresolved">0</b></span>
+                <span style="margin-left:auto; font-size:11px; color: var(--faint);">Left border = method</span>
             </div>
         </div>
 
-        <div class="table-container">
-            <div class="table-header">
-                <h2>Pending Transactions</h2>
-                <div class="badge" id="pending-count">0 UNMATCHED</div>
+        <!-- Workspace — tabbed instead of 4 stacked tables -->
+        <div class="card" id="workspace">
+            <div class="workspace-tabs" role="tablist" aria-label="Reconciliation workspace">
+                <button class="tab active" role="tab" aria-selected="true" data-tab="pending" onclick="switchWorkspace('pending')">
+                    Pending
+                    <span class="tab-count" id="pending-count">0 UNMATCHED</span>
+                </button>
+                <button class="tab" role="tab" aria-selected="false" data-tab="exceptions" onclick="switchWorkspace('exceptions')">
+                    Exceptions
+                    <span class="tab-count" id="exceptions-badge">0 EXCEPTIONS</span>
+                </button>
+                <button class="tab" role="tab" aria-selected="false" data-tab="decisions" onclick="switchWorkspace('decisions')">
+                    Audit Trail
+                    <span class="tab-count" id="decisions-count">0</span>
+                </button>
+                <button class="tab" role="tab" aria-selected="false" data-tab="records" onclick="switchWorkspace('records')">
+                    Full Records
+                    <span class="tab-count" id="records-badge">0 RECORDS</span>
+                </button>
             </div>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Vendor Txn ID</th>
-                        <th>UTR Number</th>
-                        <th>Amount</th>
-                    </tr>
-                </thead>
-                <tbody id="table-body">
-                    <tr>
-                        <td colspan="4">
-                            <div class="empty-state">
-                                No pending transactions found. Click "Check Data" to verify, or run <code>go run ./cmd/seedgen</code> to generate test data.
+
+            <div class="workspace-panels">
+                <!-- Pending -->
+                <div class="panel active" id="panel-pending" role="tabpanel">
+                    <div style="overflow-x:auto;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Vendor Txn ID</th>
+                                    <th>UTR</th>
+                                    <th style="text-align:right;">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body">
+                                <tr>
+                                    <td colspan="4">
+                                        <div class="empty-state">
+                                            <div class="empty-icon">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                            </div>
+                                            <div class="empty-title">No pending transactions</div>
+                                            <div class="empty-desc">Click <strong>Check Data</strong> to verify seed data, or run <code>go run ./cmd/seedgen</code> in your terminal.</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="padding:10px 14px; border-top:1px solid var(--border); display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                        <span style="font-size:12px; color:var(--muted);">Tip: Run the engine — rows will slide out as they are matched. The count above updates instantly.</span>
+                    </div>
+                </div>
+
+                <!-- Exceptions -->
+                <div class="panel" id="panel-exceptions" role="tabpanel">
+                    <div class="scroll-list" id="exception-list">
+                        <div class="empty-state">
+                            <div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+                            <div class="empty-title">No unresolved exceptions</div>
+                            <div class="empty-desc">When the deterministic engine leaves items unmatched, they appear here with the exact reason. Try the <strong>Agent Review</strong> next for fuzzy matches.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Decisions -->
+                <div class="panel" id="panel-decisions" role="tabpanel">
+                    <div class="scroll-list" id="decision-list">
+                        <div class="empty-state">
+                            <div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg></div>
+                            <div class="empty-title">No decisions yet</div>
+                            <div class="empty-desc">After you run reconciliation, each match shows its <em>method</em> and <em>confidence</em> here — the auditable trail for reviewers.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Full Records -->
+                <div class="panel" id="panel-records" role="tabpanel">
+                    <div id="records-section">
+                        <div id="records-table-wrapper" style="display:none;">
+                            <div class="records-toolbar">
+                                <div class="filter-group">
+                                    <label for="filter-status">Status</label>
+                                    <select class="filter-select" id="filter-status" onchange="onRecordsFilterChange()">
+                                        <option value="">All</option>
+                                        <option value="MATCHED">Matched</option>
+                                        <option value="UNMATCHED">Unmatched</option>
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label for="filter-method">Method</label>
+                                    <select class="filter-select" id="filter-method" onchange="onRecordsFilterChange()">
+                                        <option value="">All</option>
+                                        <option value="deterministic">Deterministic</option>
+                                        <option value="agent">Agent</option>
+                                        <option value="unresolved">Unresolved</option>
+                                    </select>
+                                </div>
+                                <div style="flex:1;"></div>
+                                <button class="btn-secondary" id="btn-export-csv" onclick="exportRecordsCSV()">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                    Export CSV
+                                </button>
                             </div>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
 
-        <div class="table-container">
-            <div class="table-header">
-                <h2>Exception List</h2>
-                <div class="badge" id="exceptions-badge">0 EXCEPTIONS</div>
-            </div>
-            <div class="scroll-list" id="exception-list">
-                <div class="empty-state">No unresolved exceptions — every transaction has been reconciled.</div>
-            </div>
-        </div>
+                            <div style="overflow-x:auto; border-top: 1px solid var(--border);">
+                                <table class="records-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Transaction ID</th>
+                                            <th style="text-align:right;">Amount</th>
+                                            <th>Settlement ID</th>
+                                            <th>Status</th>
+                                            <th>Method</th>
+                                            <th>Confidence</th>
+                                            <th>Reasoning</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="records-table-body"></tbody>
+                                </table>
+                            </div>
 
-        <div class="table-container">
-            <div class="table-header">
-                <h2>Recent Decisions</h2>
-                <div class="badge">AUDIT TRAIL</div>
-            </div>
-            <div class="scroll-list" id="decision-list">
-                <div class="empty-state">No reconciliation decisions yet.</div>
-            </div>
-        </div>
+                            <div class="pagination-controls" id="records-pagination" style="display:none;">
+                                <button class="pagination-btn" id="records-prev" onclick="onRecordsPageChange(-1)" disabled>← Previous</button>
+                                <span class="pagination-info" id="records-page-info">Page 1 of 1</span>
+                                <button class="pagination-btn" id="records-next" onclick="onRecordsPageChange(1)" disabled>Next →</button>
+                            </div>
+                        </div>
 
-        <div class="table-container" id="records-section">
-            <div class="table-header">
-                <h2>Full Reconciliation Records</h2>
-                <div class="badge" id="records-badge">0 RECORDS</div>
-            </div>
-            <div class="records-table-container" id="records-table-wrapper" style="display: none;">
-                <div class="records-filters">
-                    <div class="filter-group">
-                        <label for="filter-status">Status</label>
-                        <select class="filter-select" id="filter-status" onchange="onRecordsFilterChange()">
-                            <option value="">All</option>
-                            <option value="MATCHED">Matched</option>
-                            <option value="UNMATCHED">Unmatched</option>
-                        </select>
+                        <div class="load-records-trigger" id="records-load-trigger">
+                            <button class="load-records-btn" onclick="loadRecords()">Load Full Records</button>
+                            <p class="helper-text">Full auditable ledger with pagination and filters. Data loads on demand so the main dashboard stays fast.</p>
+                            <p class="helper-text" style="margin-top:6px;"><span style="font-weight:600; color:var(--text);">Next step:</span> After the engine + agent passes, open this to review every decision and export CSV.</p>
+                        </div>
                     </div>
-                    <div class="filter-group">
-                        <label for="filter-method">Method</label>
-                        <select class="filter-select" id="filter-method" onchange="onRecordsFilterChange()">
-                            <option value="">All</option>
-                            <option value="deterministic">Deterministic</option>
-                            <option value="agent">Agent</option>
-                            <option value="unresolved">Unresolved</option>
-                        </select>
-                    </div>
-                    <button class="btn-secondary" id="btn-export-csv" onclick="exportRecordsCSV()" style="margin-left: auto;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                        Export CSV
-                    </button>
-                </div>
-                <table class="records-table">
-                    <thead>
-                        <tr>
-                            <th>Transaction ID</th>
-                            <th>Amount</th>
-                            <th>Settlement ID</th>
-                            <th>Status</th>
-                            <th>Method</th>
-                            <th>Confidence</th>
-                            <th>Reasoning</th>
-                        </tr>
-                    </thead>
-                    <tbody id="records-table-body">
-                    </tbody>
-                </table>
-                <div class="pagination-controls" id="records-pagination" style="display: none;">
-                    <button class="pagination-btn" id="records-prev" onclick="onRecordsPageChange(-1)" disabled>Previous</button>
-                    <span class="pagination-info" id="records-page-info">Page 1 of 1</span>
-                    <button class="pagination-btn" id="records-next" onclick="onRecordsPageChange(1)" disabled>Next</button>
                 </div>
             </div>
-            <div class="load-records-trigger" id="records-load-trigger">
-                <button class="load-records-btn" onclick="loadRecords()">Load Full Records</button>
-                <p style="margin: 0.75rem 0 0; font-size: 0.85rem; color: var(--text-muted);">Click to load the complete reconciliation audit trail with pagination, filters, and CSV export.</p>
-            </div>
         </div>
+
+        <div style="text-align:center; padding:8px 0 4px; font-size:11px; color:var(--faint);">
+            PassCheck FIU • Demo environment — synthetic Razorpay + bank data • <span id="last-refresh">Last refresh: —</span>
+        </div>
+    </main>
 
     <div class="toast-container" id="toast-container"></div>
 
@@ -868,8 +1426,8 @@
         let merchantId = "";
         let providerId = "";
         let currentPendingIds = new Set();
-        let lastReconResult = null;   // full result payload from the last /api/v1/reconcile call
-        let lastDashboard = null;     // latest dashboard payload, used by checkDataStatus()
+        let lastReconResult = null;
+        let lastDashboard = null;
 
         const formatCurrency = (amount) => {
             return new Intl.NumberFormat('en-IN', {
@@ -899,7 +1457,7 @@
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
             toast.innerHTML = `
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:1px;">
                     ${type === 'success' 
                         ? '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>'
                         : '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>'
@@ -908,7 +1466,54 @@
                 <span>${message}</span>
             `;
             container.appendChild(toast);
-            setTimeout(() => { toast.remove(); }, 5000);
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(4px)'; setTimeout(()=> toast.remove(), 220); }, 4500);
+        };
+
+        // Workspace tabs — pure frontend, no backend impact
+        const switchWorkspace = (name) => {
+            document.querySelectorAll('.workspace-tabs .tab').forEach(t => {
+                const active = t.dataset.tab === name;
+                t.classList.toggle('active', active);
+                t.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+            document.querySelectorAll('.workspace-panels .panel').forEach(p => {
+                p.classList.toggle('active', p.id === `panel-${name}`);
+            });
+            if (name === 'records' && !recordsState.loaded) {
+                // hint but don't auto-fetch until user clicks Load; keeps initial load fast
+            }
+            try { localStorage.setItem('pc_tab', name); } catch (e) {}
+        };
+
+        const updateStepper = (state) => {
+            // state: { pendingCount, exceptionCount, hasDecisions }
+            const verify = document.querySelector('.step[data-step="verify"]');
+            const engine = document.querySelector('.step[data-step="engine"]');
+            const agent = document.querySelector('.step[data-step="agent"]');
+            const exp = document.querySelector('.step[data-step="export"]');
+            const hint = document.getElementById('runbook-hint');
+            if (!verify || !hint) return;
+
+            const pending = state.pendingCount || 0;
+            const exceptions = state.exceptionCount || 0;
+            const hasDecisions = !!state.hasDecisions;
+
+            // reset
+            [verify, engine, agent, exp].forEach(el => el.classList.remove('active', 'done'));
+
+            if (pending === 0 && exceptions === 0 && hasDecisions) {
+                verify.classList.add('done'); engine.classList.add('done'); agent.classList.add('done'); exp.classList.add('active');
+                hint.innerHTML = '<span><strong>All settled.</strong> Review the <strong>Audit Trail</strong> or <strong>Export CSV</strong> in Full Records.</span>';
+            } else if (exceptions > 0) {
+                verify.classList.add('done'); engine.classList.add('done'); agent.classList.add('active');
+                hint.innerHTML = `<span><strong>${exceptions} exception${exceptions===1?'':'s'}</strong> need review — run <strong>Agent</strong> or inspect the <strong>Exceptions</strong> tab.</span>`;
+            } else if (pending > 0) {
+                verify.classList.add('done'); engine.classList.add('active');
+                hint.innerHTML = `<span><strong>${pending} pending</strong> transaction${pending===1?'':'s'} — run the <strong>Deterministic Engine</strong> next.</span>`;
+            } else {
+                verify.classList.add('active');
+                hint.innerHTML = '<span>Start with <strong>Check Data</strong> to confirm seeded transactions are loaded.</span>';
+            }
         };
 
         const fetchConfig = async () => {
@@ -918,6 +1523,19 @@
                 if (data.error) throw new Error(data.error);
                 merchantId = data.merchant_id;
                 providerId = data.provider_id;
+                const pill = document.getElementById('merchant-pill');
+                if (pill) {
+                    const shortId = merchantId.length > 18 ? merchantId.slice(0, 8) + '…' + merchantId.slice(-4) : merchantId;
+                    pill.textContent = `Merchant ${shortId}`;
+                    pill.title = merchantId;
+                }
+                // restore tab
+                try {
+                    const saved = localStorage.getItem('pc_tab');
+                    if (saved && ['pending','exceptions','decisions','records'].includes(saved)) {
+                        switchWorkspace(saved);
+                    }
+                } catch (e) {}
                 await refreshDashboard();
             } catch (err) {
                 showToast("Failed to load config: " + err.message, "error");
@@ -946,25 +1564,40 @@
                 }
 
                 document.getElementById('pending-count').innerText = `${data.pending_transactions.length} UNMATCHED`;
+                const footPending = document.getElementById('pending-count-foot');
+                if (footPending) footPending.textContent = `${data.pending_transactions.length} transaction${data.pending_transactions.length===1?'':'s'}`;
 
                 renderPerformancePanel(data);
                 renderExceptions(data.exceptions || []);
                 renderDecisions(data.recent_matches || []);
+
+                // sync tab counts
+                const decCount = (data.recent_matches || []).length;
+                const dc = document.getElementById('decisions-count');
+                if (dc) dc.textContent = String(decCount);
+
+                const lastRefresh = document.getElementById('last-refresh');
+                if (lastRefresh) lastRefresh.textContent = `Last refresh: ${new Date().toLocaleTimeString()}`;
+
+                updateStepper({
+                    pendingCount: data.pending_transactions.length,
+                    exceptionCount: data.exception_count,
+                    hasDecisions: decCount > 0 || (data.method_breakdown && (data.method_breakdown.deterministic || data.method_breakdown.agent))
+                });
 
                 const tbody = document.getElementById('table-body');
                 const newIds = new Set(data.pending_transactions.map(t => t.vendor_txn_id));
 
                 if (data.pending_transactions.length === 0) {
                     if (isRecon) {
-                        // Animate all leaving
                         Array.from(tbody.children).forEach(row => {
                             row.classList.add('row-leave');
                         });
                         setTimeout(() => {
-                            tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">All transactions matched successfully!</div></td></tr>`;
-                        }, 500);
+                            tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">✓</div><div class="empty-title">All settled</div><div class="empty-desc">Every seeded transaction has been matched. Open <strong>Audit Trail</strong> to review, or <strong>Full Records → Export CSV</strong>.</div></div></td></tr>`;
+                        }, 350);
                     } else {
-                        tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No pending transactions found. Click "Check Data" to verify, or run <code>go run ./cmd/seedgen</code> to generate test data.</div></td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="empty-title">No pending transactions</div><div class="empty-desc">Click <strong>Check Data</strong> to verify, or run <code>go run ./cmd/seedgen</code> to generate demo data.</div></div></td></tr>`;
                     }
                     currentPendingIds = newIds;
                     return;
@@ -976,27 +1609,24 @@
                     html += `
                         <tr id="row-${txn.vendor_txn_id}" class="${isNew ? 'row-enter' : ''}">
                             <td>${txn.date}</td>
-                            <td>${txn.vendor_txn_id}</td>
+                            <td><span class="utr">${txn.vendor_txn_id}</span></td>
                             <td><span class="utr">${txn.utr_number}</span></td>
-                            <td class="amount">₹${formatCurrency(txn.amount)}</td>
+                            <td style="text-align:right;" class="amount">₹${formatCurrency(txn.amount)}</td>
                         </tr>
                     `;
                 });
 
                 if (isRecon) {
-                    // Find rows that are no longer pending and animate them out
                     currentPendingIds.forEach(id => {
                         if (!newIds.has(id)) {
                             const row = document.getElementById(`row-${id}`);
                             if (row) {
                                 row.classList.add('row-leave');
-                                setTimeout(() => row.remove(), 500);
+                                setTimeout(() => row.remove(), 350);
                             }
                         }
                     });
-                    
-                    // After animations, fully re-render just to be safe
-                    setTimeout(() => { tbody.innerHTML = html; }, 500);
+                    setTimeout(() => { tbody.innerHTML = html; }, 350);
                 } else {
                     tbody.innerHTML = html;
                 }
@@ -1014,7 +1644,6 @@
             const unresolved = mb.unresolved || 0;
             const total = det + agent + unresolved;
 
-            // Match rate over every audited decision; guard the empty state.
             const rateEl = document.getElementById('stat-match-rate');
             if (total === 0) {
                 rateEl.innerText = "—";
@@ -1022,25 +1651,19 @@
                 rateEl.innerText = `${(((det + agent) / total) * 100).toFixed(1)}%`;
             }
 
-            // Throughput only exists on the reconcile response, not here.
             const tpEl = document.getElementById('stat-throughput');
             const tpNote = document.getElementById('stat-throughput-note');
             if (lastReconResult && lastReconResult.throughput_per_sec != null) {
                 tpEl.innerText = `${lastReconResult.throughput_per_sec.toLocaleString('en-IN', { maximumFractionDigits: 0 })} rec/s`;
-                tpNote.innerText = `from last engine run (${lastReconResult.elapsed_ms} ms for ${lastReconResult.total_processed} records)`;
+                tpNote.innerText = `last run • ${lastReconResult.elapsed_ms} ms for ${lastReconResult.total_processed} records`;
             } else {
                 tpEl.innerText = "—";
-                tpNote.innerText = "Run reconciliation to see throughput";
+                tpNote.innerText = "Run the engine to measure";
             }
 
-            // Use exception_count directly; no silent fallback to pending_transactions.length.
-        // The two numbers measure different things (capped exception list vs all UNMATCHED
-        // rows) and diverging would show two conflicting "exceptions" numbers on the page.
-        document.getElementById('stat-exceptions').innerText =
-            data.exception_count != null ? data.exception_count : "—";
+            document.getElementById('stat-exceptions').innerText =
+                data.exception_count != null ? data.exception_count : "—";
 
-            // Method breakdown bar + labels. Zero-total keeps all segments at 0
-            // width and shows an honest empty track instead of fake data.
             const pct = (n) => total === 0 ? 0 : (n / total) * 100;
             document.getElementById('seg-deterministic').style.width = pct(det) + '%';
             document.getElementById('seg-agent').style.width = pct(agent) + '%';
@@ -1055,7 +1678,7 @@
             document.getElementById('exceptions-badge').innerText = `${exceptions.length} EXCEPTION${exceptions.length === 1 ? '' : 'S'}`;
 
             if (exceptions.length === 0) {
-                listEl.innerHTML = `<div class="empty-state">No unresolved exceptions — every transaction has been reconciled.</div>`;
+                listEl.innerHTML = `<div class="empty-state"><div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/></svg></div><div class="empty-title">No unresolved exceptions</div><div class="empty-desc">Everything is matched. Exceptions left by the deterministic pass would appear here for agent review.</div></div>`;
                 return;
             }
 
@@ -1075,7 +1698,7 @@
             const listEl = document.getElementById('decision-list');
 
             if (!matches || matches.length === 0) {
-                listEl.innerHTML = `<div class="empty-state">No reconciliation decisions yet.</div>`;
+                listEl.innerHTML = `<div class="empty-state"><div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg></div><div class="empty-title">No decisions yet</div><div class="empty-desc">Run reconciliation — each match will show its <em>method</em> and <em>confidence</em> here.</div></div>`;
                 return;
             }
 
@@ -1106,9 +1729,11 @@
 
                 if (!lastDashboard || !lastDashboard.pending_transactions || lastDashboard.pending_transactions.length === 0) {
                     showToast("No transactions found. Generate synthetic data first: go run ./cmd/seedgen", "error");
+                    switchWorkspace('pending');
                 } else {
                     const unmatched = lastDashboard.pending_transactions.length;
-                    showToast(`${unmatched} transaction(s) currently awaiting reconciliation.`);
+                    showToast(`${unmatched} transaction(s) awaiting reconciliation.`);
+                    switchWorkspace('pending');
                 }
             } catch (err) {
                 showToast(err.message, "error");
@@ -1124,7 +1749,7 @@
             
             const btn = document.getElementById('btn-reconcile');
             const loader = document.getElementById('loader-reconcile');
-            btn.style.animation = 'pulseGlow 1s infinite';
+            btn.style.opacity = '0.7';
             btn.style.pointerEvents = 'none';
             loader.style.display = 'inline-block';
 
@@ -1139,15 +1764,21 @@
                 if (res.ok) {
                     lastReconResult = data.result || null;
                     const matched = lastReconResult ? lastReconResult.matched_count : 0;
-                    showToast(`Reconciliation complete! Matched ${matched} transactions.`);
+                    showToast(`Reconciliation complete — matched ${matched} transaction(s).`);
                     await refreshDashboard(true, true);
+                    // guide user to next tab based on result
+                    if (lastDashboard && lastDashboard.exception_count > 0) {
+                        switchWorkspace('exceptions');
+                    } else {
+                        switchWorkspace('decisions');
+                    }
                 } else {
                     throw new Error(data.error || "Engine failed");
                 }
             } catch (err) {
                 showToast(err.message, "error");
             } finally {
-                btn.style.animation = '';
+                btn.style.opacity = '1';
                 btn.style.pointerEvents = 'auto';
                 loader.style.display = 'none';
             }
@@ -1158,7 +1789,7 @@
 
             const btn = document.getElementById('btn-agent');
             const loader = document.getElementById('loader-agent');
-            btn.style.animation = 'pulseGlow 1s infinite';
+            btn.style.opacity = '0.7';
             btn.style.pointerEvents = 'none';
             loader.style.display = 'inline-block';
 
@@ -1171,20 +1802,21 @@
                 const data = await res.json();
 
                 if (res.status === 503) {
-                    showToast("Agent resolution unavailable — GEMINI_API_KEY not configured on the server", "error");
+                    showToast("Agent unavailable — GEMINI_API_KEY not configured", "error");
                     return;
                 }
 
                 if (res.ok) {
-                    showToast(`Agent pass complete! Resolved ${data.resolved_count} exceptions.`);
+                    showToast(`Agent review complete — resolved ${data.resolved_count} exception(s).`);
                     await refreshDashboard(true, true);
+                    switchWorkspace(data.resolved_count > 0 ? 'decisions' : 'exceptions');
                 } else {
                     throw new Error(data.error || "Agent resolution failed");
                 }
             } catch (err) {
                 showToast(err.message, "error");
             } finally {
-                btn.style.animation = '';
+                btn.style.opacity = '1';
                 btn.style.pointerEvents = 'auto';
                 loader.style.display = 'none';
             }
@@ -1202,17 +1834,19 @@
         };
 
         const loadRecords = async () => {
-            if (recordsState.loaded) return;
+            if (recordsState.loaded) {
+                // already loaded — just ensure wrapper visible
+                document.getElementById('records-load-trigger').style.display = 'none';
+                document.getElementById('records-table-wrapper').style.display = 'block';
+                return;
+            }
             
             const trigger = document.getElementById('records-load-trigger');
             const wrapper = document.getElementById('records-table-wrapper');
             const btn = trigger.querySelector('.load-records-btn');
             
             btn.disabled = true;
-            btn.innerHTML = `
-                <span class="loader" style="display: inline-block; margin-right: 0.5rem;"></span>
-                Loading...
-            `;
+            btn.textContent = 'Loading…';
 
             try {
                 await fetchRecords();
@@ -1223,7 +1857,7 @@
                 showToast("Failed to load records: " + err.message, "error");
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = 'Load Full Records';
+                btn.textContent = 'Load Full Records';
             }
         };
 
@@ -1252,7 +1886,7 @@
             const tbody = document.getElementById('records-table-body');
             
             if (!records || records.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" style="padding: 3rem; text-align: center; color: var(--text-muted);">No records found for the current filters.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" style="padding: 28px; text-align: center; color: var(--muted);">No records match the current filters — try clearing filters.</td></tr>`;
                 return;
             }
 
@@ -1263,19 +1897,19 @@
                     </td>
                     <td class="amount-right">₹${formatCurrency(r.amount)}</td>
                     <td>
-                        ${r.settlement_id ? `<span class="truncated utr" title="${r.settlement_id}">${r.settlement_id}</span>` : '<span style="color: var(--text-muted);">—</span>'}
+                        ${r.settlement_id ? `<span class="truncated utr" title="${r.settlement_id}">${r.settlement_id}</span>` : '<span style="color: var(--faint);">—</span>'}
                     </td>
                     <td>
                         <span class="status-badge ${r.recon_status === 'MATCHED' ? 'status-matched' : 'status-unmatched'}">${r.recon_status}</span>
                     </td>
                     <td>
-                        ${r.method ? `<span class="chip chip-${r.method}">${r.method}</span>` : '<span style="color: var(--text-muted);">—</span>'}
+                        ${r.method ? `<span class="chip chip-${r.method}">${r.method}</span>` : '<span style="color: var(--faint);">—</span>'}
                     </td>
                     <td class="confidence-cell">
                         ${r.confidence != null ? (r.confidence * 100).toFixed(0) + '%' : '—'}
                     </td>
                     <td>
-                        <span class="reasoning-wrap">${r.reasoning || '—'}</span>
+                        <span class="reasoning-wrap" title="${(r.reasoning||'').replace(/"/g,'&quot;')}">${r.reasoning || '—'}</span>
                     </td>
                 </tr>
             `).join('');
@@ -1293,7 +1927,7 @@
                 pagination.style.display = 'flex';
                 prevBtn.disabled = recordsState.currentPage <= 1;
                 nextBtn.disabled = recordsState.currentPage >= recordsState.totalPages;
-                pageInfo.innerText = `Page ${recordsState.currentPage} of ${recordsState.totalPages}`;
+                pageInfo.innerHTML = `Page <strong>${recordsState.currentPage}</strong> of ${recordsState.totalPages} • ${recordsState.totalCount} records`;
             }
         };
 
