@@ -858,34 +858,239 @@
             font-size: 12.5px;
         }
 
-        .records-table th {
-            font-size: 10.5px;
+        .records-table th, .audit-table th {
+            font-size: 11px;
             padding: 9px 12px;
         }
 
-        .records-table td {
+        .records-table td, .audit-table td {
             padding: 10px 12px;
         }
 
-        .records-table tbody tr {
-            border-left: 3px solid transparent;
+        /* Unified Audit Table Styles - No Truncation, Dense & Readable */
+        .audit-table-wrapper {
+            overflow-x: auto;
+            width: 100%;
+            background: var(--surface);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-top: 4px;
         }
 
-        .records-table tbody tr.deterministic { border-left-color: var(--success); }
-        .records-table tbody tr.agent { border-left-color: var(--primary); }
-        .records-table tbody tr.unresolved { border-left-color: var(--error); }
-        .records-table tbody tr.duplicate { border-left-color: var(--faint); }
+        .audit-table {
+            width: 100%;
+            min-width: 1680px;
+            border-collapse: collapse;
+            font-size: 12px;
+            text-align: left;
+        }
 
-        .truncated {
-            max-width: 140px;
+        .audit-table th {
+            padding: 8px 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
             white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: inline-block;
-            vertical-align: middle;
+            font-size: 11px;
+            letter-spacing: 0.02em;
         }
 
-        .truncated[title] { cursor: help; }
+        .audit-table .thead-group-row th {
+            padding: 8px 12px 6px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface-muted);
+        }
+
+        .audit-table .thead-cols-row th {
+            padding: 7px 12px;
+            background: var(--surface);
+            font-size: 11px;
+            color: var(--muted);
+            border-bottom: 2px solid var(--border);
+        }
+
+        .audit-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+            color: var(--text);
+            line-height: 1.4;
+        }
+
+        .audit-table tbody tr:hover {
+            background: rgba(0, 0, 0, 0.015);
+        }
+
+        .group-pill {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 2px 8px;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .group-pill.vendor { background: rgba(100, 116, 139, 0.12); color: var(--text-secondary); }
+        .group-pill.bank { background: rgba(37, 99, 235, 0.1); color: #1d4ed8; }
+        .group-pill.audit { background: rgba(16, 185, 129, 0.1); color: #059669; }
+
+        /* Divider column between Vendor and Bank sides */
+        .th-divider, .col-divider {
+            width: 110px;
+            min-width: 110px;
+            max-width: 110px;
+            padding: 0 4px !important;
+            text-align: center;
+        }
+
+        .col-divider-cell {
+            border-left: 2px solid var(--border) !important;
+            border-right: 2px solid var(--border) !important;
+            background: var(--surface-muted);
+            text-align: center;
+            vertical-align: middle;
+            padding: 6px 8px !important;
+            white-space: nowrap;
+        }
+
+        .col-divider-cell.matched {
+            background: rgba(16, 185, 129, 0.05);
+            border-left-color: rgba(16, 185, 129, 0.3) !important;
+            border-right-color: rgba(16, 185, 129, 0.3) !important;
+        }
+
+        .badge-matched-pair {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: rgba(16, 185, 129, 0.12);
+            color: #047857;
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            white-space: nowrap;
+        }
+
+        .badge-unmatched {
+            display: inline-flex;
+            align-items: center;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: rgba(239, 68, 68, 0.08);
+            color: #b91c1c;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            white-space: nowrap;
+        }
+
+        .badge-unclaimed {
+            display: inline-flex;
+            align-items: center;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: rgba(59, 130, 246, 0.08);
+            color: #1d4ed8;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            white-space: nowrap;
+        }
+
+        /* Non-truncated Monospace & Figures */
+        .mono {
+            font-family: var(--font-mono);
+            font-size: 11.5px;
+            white-space: nowrap;
+        }
+
+        .amount-mono {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 600;
+            text-align: right;
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .date-mono {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .conf-mono {
+            font-family: var(--font-mono);
+            font-size: 11.5px;
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+        }
+
+        .narration-full {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            line-height: 1.35;
+            color: var(--text);
+            min-width: 240px;
+            max-width: 380px;
+            word-break: break-word;
+            white-space: normal;
+        }
+
+        .reasoning-cell {
+            min-width: 260px;
+            max-width: 420px;
+            line-height: 1.35;
+        }
+
+        .reasoning-primary {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text);
+            margin-bottom: 3px;
+        }
+
+        .reasoning-secondary {
+            font-size: 10.5px;
+            color: var(--muted);
+            font-family: var(--font-mono);
+            word-break: break-word;
+            line-height: 1.3;
+        }
+
+        .empty-cell-pill {
+            display: inline-block;
+            font-size: 11px;
+            font-style: italic;
+            color: var(--muted);
+            background: var(--surface-muted);
+            border: 1px dashed var(--border);
+            padding: 2px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .empty-state-muted {
+            color: var(--faint);
+            text-align: center;
+        }
+
+        /* Deprecate .truncated: make it fully visible */
+        .truncated {
+            white-space: normal;
+            word-break: break-all;
+            max-width: none;
+            overflow: visible;
+            text-overflow: clip;
+            display: inline;
+        }
+
+        .truncated[title] { cursor: default; }
 
         .amount-right {
             text-align: right;
@@ -893,26 +1098,6 @@
             font-weight: 600;
             color: var(--text);
         }
-
-        .reasoning-wrap {
-            max-width: 380px;
-            white-space: normal;
-            word-wrap: break-word;
-            line-height: 1.4;
-            color: var(--text-secondary);
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        .status-badge {
-            font-size: 10px;
-            font-weight: 700;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            padding: 3px 7px;
-            border-radius: 999px;
             border: 1px solid;
             display: inline-flex;
         }
@@ -1997,26 +2182,37 @@
             <div class="workspace-panels">
                 <!-- Pending -->
                 <div class="panel active" id="panel-pending" role="tabpanel">
-                    <div style="overflow-x:auto;">
-                        <table>
+                    <div class="audit-table-wrapper">
+                        <table class="audit-table">
                             <thead>
-                                <tr>
+                                <tr class="thead-group-row">
+                                    <th colspan="5" class="th-group th-vendor-group"><span class="group-pill vendor">Vendor Ledger Side</span></th>
+                                    <th class="th-divider"></th>
+                                    <th colspan="5" class="th-group th-bank-group"><span class="group-pill bank">Bank Statement Side</span></th>
+                                    <th colspan="3" class="th-group th-meta-group"><span class="group-pill audit">Audit &amp; Reasoning</span></th>
+                                </tr>
+                                <tr class="thead-cols-row">
                                     <th>Source</th>
-                                    <th>Date</th>
                                     <th>Vendor Txn ID</th>
-                                    <th>UTR</th>
-                                    <th style="text-align:right;">Amount</th>
-                                    <th>Bank</th>
-                                    <th style="width:24px;"></th>
+                                    <th>Settlement ID</th>
+                                    <th style="text-align:right;">Vendor Amount</th>
+                                    <th>Vendor Date</th>
+                                    <th class="th-divider">Status</th>
+                                    <th>Bank UTR</th>
+                                    <th>Bank Narration</th>
+                                    <th style="text-align:right;">Bank Amount</th>
+                                    <th>Bank Date</th>
+                                    <th>Type</th>
+                                    <th>Method</th>
+                                    <th>Confidence</th>
+                                    <th>Reasoning</th>
                                 </tr>
                             </thead>
                             <tbody id="table-body">
                                 <tr>
-                                    <td colspan="7">
+                                    <td colspan="14">
                                         <div class="empty-state">
-                                            <div class="empty-icon">
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                            </div>
+                                            <div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
                                             <div class="empty-title">No pending transactions</div>
                                             <div class="empty-desc">Click <strong>Check Data</strong> to verify seed data, or run <code>go run ./cmd/seedgen</code> in your terminal.</div>
                                         </div>
@@ -2032,23 +2228,87 @@
 
                 <!-- Exceptions -->
                 <div class="panel" id="panel-exceptions" role="tabpanel">
-                    <div class="scroll-list" id="exception-list">
-                        <div class="empty-state">
-                            <div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
-                            <div class="empty-title">No unresolved exceptions</div>
-                            <div class="empty-desc">When the deterministic engine leaves items unmatched, they appear here with the exact reason. Try the <strong>Agent Review</strong> next for fuzzy matches.</div>
-                        </div>
+                    <div class="audit-table-wrapper">
+                        <table class="audit-table">
+                            <thead>
+                                <tr class="thead-group-row">
+                                    <th colspan="5" class="th-group th-vendor-group"><span class="group-pill vendor">Vendor Ledger Side</span></th>
+                                    <th class="th-divider"></th>
+                                    <th colspan="5" class="th-group th-bank-group"><span class="group-pill bank">Bank Statement Side</span></th>
+                                    <th colspan="3" class="th-group th-meta-group"><span class="group-pill audit">Audit &amp; Reasoning</span></th>
+                                </tr>
+                                <tr class="thead-cols-row">
+                                    <th>Source</th>
+                                    <th>Vendor Txn ID</th>
+                                    <th>Settlement ID</th>
+                                    <th style="text-align:right;">Vendor Amount</th>
+                                    <th>Vendor Date</th>
+                                    <th class="th-divider">Status</th>
+                                    <th>Bank UTR</th>
+                                    <th>Bank Narration</th>
+                                    <th style="text-align:right;">Bank Amount</th>
+                                    <th>Bank Date</th>
+                                    <th>Type</th>
+                                    <th>Method</th>
+                                    <th>Confidence</th>
+                                    <th>Reasoning</th>
+                                </tr>
+                            </thead>
+                            <tbody id="exceptions-table-body">
+                                <tr>
+                                    <td colspan="14">
+                                        <div class="empty-state">
+                                            <div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+                                            <div class="empty-title">No unresolved exceptions</div>
+                                            <div class="empty-desc">When the deterministic engine leaves items unmatched, they appear here with the exact reason. Try <strong>Agent Review</strong> for AI fuzzy matching.</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                <!-- Decisions -->
+                <!-- Decisions / Audit Trail -->
                 <div class="panel" id="panel-decisions" role="tabpanel">
-                    <div class="scroll-list" id="decision-list">
-                        <div class="empty-state">
-                            <div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg></div>
-                            <div class="empty-title">No decisions yet</div>
-                            <div class="empty-desc">After you run reconciliation, each match shows its <em>method</em> and <em>confidence</em> here — the auditable trail for reviewers.</div>
-                        </div>
+                    <div class="audit-table-wrapper">
+                        <table class="audit-table">
+                            <thead>
+                                <tr class="thead-group-row">
+                                    <th colspan="5" class="th-group th-vendor-group"><span class="group-pill vendor">Vendor Ledger Side</span></th>
+                                    <th class="th-divider"></th>
+                                    <th colspan="5" class="th-group th-bank-group"><span class="group-pill bank">Bank Statement Side</span></th>
+                                    <th colspan="3" class="th-group th-meta-group"><span class="group-pill audit">Audit &amp; Reasoning</span></th>
+                                </tr>
+                                <tr class="thead-cols-row">
+                                    <th>Source</th>
+                                    <th>Vendor Txn ID</th>
+                                    <th>Settlement ID</th>
+                                    <th style="text-align:right;">Vendor Amount</th>
+                                    <th>Vendor Date</th>
+                                    <th class="th-divider">Match</th>
+                                    <th>Bank UTR</th>
+                                    <th>Bank Narration</th>
+                                    <th style="text-align:right;">Bank Amount</th>
+                                    <th>Bank Date</th>
+                                    <th>Type</th>
+                                    <th>Method</th>
+                                    <th>Confidence</th>
+                                    <th>Reasoning</th>
+                                </tr>
+                            </thead>
+                            <tbody id="decisions-table-body">
+                                <tr>
+                                    <td colspan="14">
+                                        <div class="empty-state">
+                                            <div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg></div>
+                                            <div class="empty-title">No decisions yet</div>
+                                            <div class="empty-desc">After reconciliation runs, verified matched pairs with side-by-side amounts and dates appear here.</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -2057,6 +2317,15 @@
                     <div id="records-section">
                         <div id="records-table-wrapper" style="display:none;">
                             <div class="records-toolbar">
+                                <div class="filter-group">
+                                    <label for="filter-category">Category</label>
+                                    <select class="filter-select" id="filter-category" onchange="onRecordsFilterChange()">
+                                        <option value="">All Categories</option>
+                                        <option value="matched_pair">Matched Pairs</option>
+                                        <option value="unmatched_vendor">Unmatched Vendor</option>
+                                        <option value="unmatched_bank">Unmatched Bank</option>
+                                    </select>
+                                </div>
                                 <div class="filter-group">
                                     <label for="filter-status">Status</label>
                                     <select class="filter-select" id="filter-status" onchange="onRecordsFilterChange()">
@@ -2083,18 +2352,30 @@
                                 </button>
                             </div>
 
-                            <div style="overflow-x:auto; border-top: 1px solid var(--border);">
-                                <table class="records-table">
+                            <div class="audit-table-wrapper">
+                                <table class="audit-table">
                                     <thead>
-                                        <tr>
-                                            <th>Transaction ID</th>
-                                            <th style="text-align:right;">Amount</th>
+                                        <tr class="thead-group-row">
+                                            <th colspan="5" class="th-group th-vendor-group"><span class="group-pill vendor">Vendor Ledger Side</span></th>
+                                            <th class="th-divider"></th>
+                                            <th colspan="5" class="th-group th-bank-group"><span class="group-pill bank">Bank Statement Side</span></th>
+                                            <th colspan="3" class="th-group th-meta-group"><span class="group-pill audit">Audit &amp; Reasoning</span></th>
+                                        </tr>
+                                        <tr class="thead-cols-row">
+                                            <th>Source</th>
+                                            <th>Vendor Txn ID</th>
                                             <th>Settlement ID</th>
-                                            <th>Status</th>
+                                            <th style="text-align:right;">Vendor Amount</th>
+                                            <th>Vendor Date</th>
+                                            <th class="th-divider">Status</th>
+                                            <th>Bank UTR</th>
+                                            <th>Bank Narration</th>
+                                            <th style="text-align:right;">Bank Amount</th>
+                                            <th>Bank Date</th>
+                                            <th>Type</th>
                                             <th>Method</th>
                                             <th>Confidence</th>
                                             <th>Reasoning</th>
-                                            <th style="width:24px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="records-table-body"></tbody>
@@ -2110,8 +2391,7 @@
 
                         <div class="load-records-trigger" id="records-load-trigger">
                             <button class="load-records-btn" onclick="loadRecords()">Load Full Records</button>
-                            <p class="helper-text">Full auditable ledger with pagination and filters. Data loads on demand so the main dashboard stays fast.</p>
-                            <p class="helper-text" style="margin-top:6px;"><span style="font-weight:600; color:var(--text);">Next step:</span> After the engine + agent passes, open this to review every decision and export CSV.</p>
+                            <p class="helper-text">Full auditable ledger with pagination and filters. Shows every matched pair, unmatched vendor row, and unmatched bank statement credit.</p>
                         </div>
                     </div>
                 </div>
@@ -2562,6 +2842,146 @@
             return `<span class="bank-type" title="${bankTxnType}">${bankTxnType}</span>`;
         };
 
+        const escapeHtml = (str) => {
+            if (str == null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        };
+
+        const renderAuditTableRow = (r) => {
+            const cat = r.record_category || (r.bank_amount != null && r.vendor_amount != null ? 'matched_pair' : (r.bank_amount != null ? 'unmatched_bank' : 'unmatched_vendor'));
+            const isMatched = cat === 'matched_pair';
+            const isUnmatchedVendor = cat === 'unmatched_vendor';
+            const isUnmatchedBank = cat === 'unmatched_bank';
+
+            // 1. Source
+            const sourceCell = isUnmatchedBank
+                ? `<span class="side-badge bank">Bank Statement</span>`
+                : sourceBadge(r.vendor_source || r.vendor_name || 'Razorpay');
+
+            // 2. Vendor Txn ID (full, no truncation)
+            const vendorTxnCell = isUnmatchedBank
+                ? `<span class="empty-cell-pill">No vendor-side transaction claims this credit</span>`
+                : `<span class="mono">${escapeHtml(r.vendor_txn_id || '—')}</span>`;
+
+            // 3. Settlement ID (full, no truncation)
+            const settlCell = isUnmatchedBank
+                ? `<span class="empty-state-muted">—</span>`
+                : (r.vendor_settlement_id ? `<span class="mono">${escapeHtml(r.vendor_settlement_id)}</span>` : `<span class="empty-state-muted">—</span>`);
+
+            // 4. Vendor Amount (right-aligned tabular figures)
+            const vendorAmtCell = isUnmatchedBank
+                ? `<span class="empty-state-muted">—</span>`
+                : `<span class="amount-mono">₹${formatCurrency(r.vendor_amount)}</span>`;
+
+            // 5. Vendor Date
+            const vendorDateCell = isUnmatchedBank
+                ? `<span class="empty-state-muted">—</span>`
+                : `<span class="date-mono">${r.vendor_settlement_date ? r.vendor_settlement_date.substring(0, 10) : '—'}</span>`;
+
+            // 6. Divider Cell
+            let dividerCell = '';
+            if (isMatched) {
+                dividerCell = `<td class="col-divider-cell matched"><span class="badge-matched-pair">✓ Verified Match</span></td>`;
+            } else if (isUnmatchedBank) {
+                dividerCell = `<td class="col-divider-cell unmatched"><span class="badge-unclaimed">Unclaimed</span></td>`;
+            } else {
+                dividerCell = `<td class="col-divider-cell unmatched"><span class="badge-unmatched">Unmatched</span></td>`;
+            }
+
+            // 7. Bank UTR (full, no truncation)
+            const bankUtrCell = isUnmatchedVendor
+                ? `<span class="empty-cell-pill">No bank credit found yet</span>`
+                : `<span class="mono">${escapeHtml(r.bank_utr || r.bank_txn_id || '—')}</span>`;
+
+            // 8. Bank Narration (full text, not truncated)
+            const bankNarrCell = isUnmatchedVendor
+                ? `<span class="empty-cell-pill">Awaiting bank settlement</span>`
+                : `<div class="narration-full">${escapeHtml(r.bank_narration || '—')}</div>`;
+
+            // 9. Bank Amount (right-aligned tabular figures)
+            const bankAmtCell = isUnmatchedVendor
+                ? `<span class="empty-state-muted">—</span>`
+                : `<span class="amount-mono">₹${formatCurrency(r.bank_amount)}</span>`;
+
+            // 10. Bank Date
+            const bankDateCell = isUnmatchedVendor
+                ? `<span class="empty-state-muted">—</span>`
+                : `<span class="date-mono">${r.bank_txn_date ? r.bank_txn_date.substring(0, 10) : '—'}</span>`;
+
+            // 11. Bank Type
+            const bankTypeCell = isUnmatchedVendor
+                ? `<span class="bank-type awaiting">Awaiting</span>`
+                : bankTypeBadge(r.bank_txn_type || 'CREDIT');
+
+            // 12. Method
+            let methodCell = '';
+            if (isMatched) {
+                methodCell = `<span class="chip chip-${r.method || 'deterministic'}">${r.method || 'deterministic'}</span>`;
+            } else if (isUnmatchedBank) {
+                methodCell = `<span class="chip chip-unresolved">unclaimed</span>`;
+            } else {
+                methodCell = `<span class="chip chip-unresolved">unresolved</span>`;
+            }
+
+            // 13. Confidence
+            const confCell = isMatched
+                ? `<span class="conf-mono">${r.confidence != null ? (r.confidence * 100).toFixed(0) + '%' : '100%'}</span>`
+                : `<span class="empty-state-muted">—</span>`;
+
+            // 14. Reasoning (Primary plain language + secondary technical string)
+            const primaryReason = humanizeReasoning(r.reasoning, r.method || (isMatched ? 'deterministic' : 'unresolved'));
+            const techReason = (r.reasoning && r.reasoning.trim() !== primaryReason.trim()) ? r.reasoning : '';
+            const reasoningCell = `
+                <div class="reasoning-cell">
+                    <div class="reasoning-primary">${escapeHtml(primaryReason)}</div>
+                    ${techReason ? `<div class="reasoning-secondary">${escapeHtml(techReason)}</div>` : ''}
+                </div>
+            `;
+
+            const rowClass = isMatched ? 'matched-pair-row' : isUnmatchedBank ? 'unmatched-bank-row' : 'unmatched-vendor-row';
+
+            return `
+                <tr class="audit-row ${rowClass} ${r.method || ''}">
+                    <td>${sourceCell}</td>
+                    <td>${vendorTxnCell}</td>
+                    <td>${settlCell}</td>
+                    <td style="text-align:right;">${vendorAmtCell}</td>
+                    <td>${vendorDateCell}</td>
+                    ${dividerCell}
+                    <td>${bankUtrCell}</td>
+                    <td>${bankNarrCell}</td>
+                    <td style="text-align:right;">${bankAmtCell}</td>
+                    <td>${bankDateCell}</td>
+                    <td>${bankTypeCell}</td>
+                    <td>${methodCell}</td>
+                    <td>${confCell}</td>
+                    <td>${reasoningCell}</td>
+                </tr>
+            `;
+        };
+
+        const renderAuditTableRows = (records, emptyTitle, emptyDesc) => {
+            if (!records || records.length === 0) {
+                return `
+                    <tr>
+                        <td colspan="14">
+                            <div class="empty-state">
+                                <div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+                                <div class="empty-title">${emptyTitle || 'No records'}</div>
+                                <div class="empty-desc">${emptyDesc || ''}</div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+            return records.map(r => renderAuditTableRow(r)).join('');
+        };
+
         const buildReceiptHTML = (rec) => {
             // rec: { method, confidence, reasoning, decided_at, settlement_id, recon_status, vendor_txn_id, amount }
             if (!rec || (!rec.method && !rec.reasoning && !rec.recon_status)) {
@@ -2817,66 +3237,57 @@
                 const dc = document.getElementById('decisions-count');
                 if (dc) dc.textContent = String(decCount);
 
+                // Fetch full records to populate all workspace tables
+                try {
+                    const recRes = await fetch(`/api/v1/demo/records/${merchantId}?page_size=200`);
+                    if (recRes.ok) {
+                        const recData = await recRes.json();
+                        const allRecords = recData.records || [];
+                        window._allRecords = allRecords;
+
+                        // 1. Pending table: unmatched vendor rows
+                        const pendingRecords = allRecords.filter(r => r.record_category === 'unmatched_vendor');
+                        const tbody = document.getElementById('table-body');
+                        if (tbody) {
+                            tbody.innerHTML = renderAuditTableRows(
+                                pendingRecords,
+                                'No pending transactions',
+                                'All transactions have been matched. Review the Audit Trail or Full Records tab.'
+                            );
+                        }
+                        const pendingCountEl = document.getElementById('pending-count');
+                        if (pendingCountEl) pendingCountEl.innerText = `${pendingRecords.length} UNMATCHED`;
+
+                        // 2. Exceptions table: unmatched vendor rows
+                        const excRecords = allRecords.filter(r => r.record_category === 'unmatched_vendor');
+                        renderExceptions(excRecords);
+
+                        // 3. Decisions / Audit Trail: matched pairs
+                        const decRecords = allRecords.filter(r => r.record_category === 'matched_pair');
+                        renderDecisions(decRecords);
+
+                        // 4. Records count badge
+                        const recBadge = document.getElementById('records-badge');
+                        if (recBadge) recBadge.innerText = `${recData.total_count} RECORDS`;
+
+                        updateStepper({
+                            pendingCount: pendingRecords.length,
+                            exceptionCount: excRecords.length,
+                            hasDecisions: decRecords.length > 0
+                        });
+
+                        // 5. If full records table is active or loaded, refresh it
+                        if (recordsState && recordsState.loaded) {
+                            fetchRecords();
+                        }
+                    }
+                } catch (recErr) {
+                    console.error("Failed to fetch full records for workspace:", recErr);
+                }
+
                 const lastRefresh = document.getElementById('last-refresh');
                 if (lastRefresh) lastRefresh.textContent = `Last refresh: ${new Date().toLocaleTimeString()}`;
 
-                updateStepper({
-                    pendingCount: data.pending_transactions.length,
-                    exceptionCount: data.exception_count,
-                    hasDecisions: decCount > 0 || (data.method_breakdown && (data.method_breakdown.deterministic || data.method_breakdown.agent || data.method_breakdown.duplicate))
-                });
-
-                const tbody = document.getElementById('table-body');
-                const newIds = new Set(data.pending_transactions.map(t => t.vendor_txn_id));
-
-                if (data.pending_transactions.length === 0) {
-                    if (isRecon) {
-                        Array.from(tbody.children).forEach(row => {
-                            row.classList.add('row-leave');
-                        });
-                        setTimeout(() => {
-                            tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">✓</div><div class="empty-title">All settled</div><div class="empty-desc">Every seeded transaction has been matched. Open <strong>Audit Trail</strong> to review, or <strong>Full Records → Export CSV</strong>.</div></div></td></tr>`;
-                        }, 350);
-                    } else {
-                        tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="empty-title">No pending transactions</div><div class="empty-desc">Click <strong>Check Data</strong> to verify, or run <code>go run ./cmd/seedgen</code> to generate demo data.</div></div></td></tr>`;
-                    }
-                    currentPendingIds = newIds;
-                    return;
-                }
-
-                let html = '';
-                data.pending_transactions.forEach(txn => {
-                    const isNew = !currentPendingIds.has(txn.vendor_txn_id) && !isRecon;
-                    const escId = txn.vendor_txn_id.replace(/'/g, "\\'");
-                    html += `
-                        <tr id="row-${txn.vendor_txn_id}" class="${isNew ? 'row-enter' : ''} expandable-row" onclick="handlePendingExpand(this, '${escId}')">
-                            <td>${sourceBadge(txn.vendor_name)}</td>
-                            <td>${txn.date}</td>
-                            <td><span class="truncated utr" title="${txn.vendor_txn_id}">${txn.vendor_txn_id}</span></td>
-                            <td><span class="truncated utr" title="${txn.utr_number}">${txn.utr_number}</span></td>
-                            <td style="text-align:right;" class="amount">₹${formatCurrency(txn.amount)}</td>
-                            <td>${bankTypeBadge(txn.bank_txn_type)}</td>
-                            <td style="width:24px;"><span class="chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span></td>
-                        </tr>
-                    `;
-                });
-
-                if (isRecon) {
-                    currentPendingIds.forEach(id => {
-                        if (!newIds.has(id)) {
-                            const row = document.getElementById(`row-${id}`);
-                            if (row) {
-                                row.classList.add('row-leave');
-                                setTimeout(() => row.remove(), 350);
-                            }
-                        }
-                    });
-                    setTimeout(() => { tbody.innerHTML = html; }, 350);
-                } else {
-                    tbody.innerHTML = html;
-                }
-
-                currentPendingIds = newIds;
             } catch (err) {
                 console.error("Dashboard refresh error:", err);
             }
@@ -2922,55 +3333,31 @@
         };
 
         const renderExceptions = (exceptions) => {
-            const listEl = document.getElementById('exception-list');
-            document.getElementById('exceptions-badge').innerText = `${exceptions.length} EXCEPTION${exceptions.length === 1 ? '' : 'S'}`;
+            const tbody = document.getElementById('exceptions-table-body');
+            const badge = document.getElementById('exceptions-badge');
+            if (badge) badge.innerText = `${exceptions.length} EXCEPTION${exceptions.length === 1 ? '' : 'S'}`;
 
-            if (exceptions.length === 0) {
-                listEl.innerHTML = `<div class="empty-state"><div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M8 12l2 2 4-4"/></svg></div><div class="empty-title">No unresolved exceptions</div><div class="empty-desc">Everything is matched. Exceptions left by the deterministic pass would appear here for agent review.</div></div>`;
-                return;
+            if (tbody) {
+                tbody.innerHTML = renderAuditTableRows(
+                    exceptions,
+                    'No unresolved exceptions',
+                    'Everything is matched. Exceptions left by the deterministic pass appear here for agent review.'
+                );
             }
-
-            listEl.innerHTML = exceptions.map(e => {
-                const esc = e.vendor_txn_id.replace(/'/g, "\\'");
-                return `
-                <div class="audit-row unresolved expandable-row" onclick="handleExceptionExpand(this, '${esc}')">
-                    <div class="row-head">
-                        ${sourceBadge(e.vendor_name)}
-                        <span class="truncated utr" title="${e.vendor_txn_id}">${e.vendor_txn_id}</span>
-                        <span class="amount">₹${formatCurrency(e.amount)}</span>
-                        ${e.settlement_id ? `<span class="truncated utr" title="${e.settlement_id}">${e.settlement_id}</span>` : ''}
-                        ${bankTypeBadge(e.bank_txn_type)}
-                        <span class="chevron" style="margin-left:auto;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
-                    </div>
-                    <div class="human-reason">${humanizeReasoning(e.reasoning, 'unresolved')}</div>
-                </div>
-            `}).join('');
         };
 
         const renderDecisions = (matches) => {
-            const listEl = document.getElementById('decision-list');
+            const tbody = document.getElementById('decisions-table-body');
+            const countEl = document.getElementById('decisions-count');
+            if (countEl) countEl.innerText = String(matches.length);
 
-            if (!matches || matches.length === 0) {
-                listEl.innerHTML = `<div class="empty-state"><div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg></div><div class="empty-title">No decisions yet</div><div class="empty-desc">Run reconciliation — each match will show its <em>method</em> and <em>confidence</em> here.</div></div>`;
-                return;
+            if (tbody) {
+                tbody.innerHTML = renderAuditTableRows(
+                    matches,
+                    'No decisions yet',
+                    'After reconciliation runs, verified matched pairs with side-by-side amounts and dates appear here.'
+                );
             }
-
-            listEl.innerHTML = matches.map(m => {
-                const esc = m.vendor_txn_id.replace(/'/g, "\\'");
-                return `
-                <div class="audit-row ${m.method} expandable-row" onclick="handleDecisionExpand(this, '${esc}')">
-                    <div class="row-head">
-                        ${sourceBadge(m.vendor_name)}
-                        <span class="chip chip-${m.method}">${m.method}</span>
-                        <span class="conf">${(m.confidence * 100).toFixed(0)}% confidence</span>
-                        <span class="truncated utr" title="${m.vendor_txn_id}">${m.vendor_txn_id}</span>
-                        <span class="amount">₹${formatCurrency(m.amount)}</span>
-                        ${bankTypeBadge(m.bank_txn_type)}
-                        <span class="chevron" style="margin-left:auto;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
-                    </div>
-                    <div class="human-reason">${humanizeReasoning(m.reasoning, m.method)}</div>
-                </div>
-            `}).join('');
         };
 
         const checkDataStatus = async () => {
@@ -3314,6 +3701,7 @@
             pageSize: 25,
             totalPages: 1,
             totalCount: 0,
+            categoryFilter: '',
             statusFilter: '',
             methodFilter: '',
             loaded: false
@@ -3321,7 +3709,6 @@
 
         const loadRecords = async () => {
             if (recordsState.loaded) {
-                // already loaded — just ensure wrapper visible
                 document.getElementById('records-load-trigger').style.display = 'none';
                 document.getElementById('records-table-wrapper').style.display = 'block';
                 return;
@@ -3352,6 +3739,7 @@
                 page: recordsState.currentPage,
                 page_size: recordsState.pageSize
             });
+            if (recordsState.categoryFilter) params.set('category', recordsState.categoryFilter);
             if (recordsState.statusFilter) params.set('status', recordsState.statusFilter);
             if (recordsState.methodFilter) params.set('method', recordsState.methodFilter);
 
@@ -3371,78 +3759,13 @@
 
         const renderRecords = (records) => {
             const tbody = document.getElementById('records-table-body');
-            
-            if (!records || records.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" style="padding: 28px; text-align: center; color: var(--muted);">No records match the current filters — try clearing filters.</td></tr>`;
-                return;
+            if (tbody) {
+                tbody.innerHTML = renderAuditTableRows(
+                    records,
+                    'No records match the current filters',
+                    'Try clearing or changing your category, status, or method filters.'
+                );
             }
-
-            tbody.innerHTML = records.map(r => {
-                const cat = r.record_category || 'unmatched_vendor';
-                const isMatchedPair  = cat === 'matched_pair';
-                const isUnmatchedBank = cat === 'unmatched_bank';
-
-                // Determine display values based on category
-                const txnId      = isUnmatchedBank ? (r.bank_txn_id || '—') : (r.vendor_txn_id || '—');
-                const esc        = txnId.replace(/'/g, "\\'");
-                const sourceName = isUnmatchedBank ? 'Bank Statement' : (r.vendor_source || '—');
-                const amount     = isUnmatchedBank ? r.bank_amount : r.vendor_amount;
-                const settlId    = isUnmatchedBank ? null : r.vendor_settlement_id;
-                const status     = isUnmatchedBank ? 'UNMATCHED' : (r.vendor_recon_status || '—');
-                const method     = r.method || null;
-                const conf       = r.confidence;
-
-                // Category badge
-                let catBadge = '';
-                if (isMatchedPair) {
-                    catBadge = `<span class="side-badge vendor" style="background:rgba(22,163,74,0.08);border-color:rgba(22,163,74,0.3);color:#15803d;">Matched Pair</span>`;
-                } else if (isUnmatchedBank) {
-                    catBadge = `<span class="side-badge bank">Bank Statement</span>`;
-                } else {
-                    catBadge = `<span class="side-badge vendor">Vendor Ledger</span>`;
-                }
-
-                // Amount cell — for matched pairs, show both vendor and bank amounts
-                let amountCell = `<div>₹${formatCurrency(amount)}</div>`;
-                if (isMatchedPair && r.bank_amount != null && Math.abs(r.bank_amount - r.vendor_amount) > 0.001) {
-                    amountCell += `<div style="font-size:10px;color:var(--muted);margin-top:2px;">Bank: ₹${formatCurrency(r.bank_amount)}</div>`;
-                }
-                if (isMatchedPair || isUnmatchedBank) {
-                    amountCell += `<div style="margin-top:4px;display:flex;justify-content:flex-end;">${bankTypeBadge(r.bank_txn_type)}</div>`;
-                }
-
-                const statusClass = status === 'MATCHED' ? 'status-matched' : status === 'DUPLICATE_SUPPRESSED' ? 'status-duplicate' : 'status-unmatched';
-
-                return `
-                <tr class="${method || ''} expandable-row" onclick="handleRecordExpand(this, '${esc}')">
-                    <td>
-                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                            ${sourceBadge(sourceName)}
-                            <span class="truncated utr" title="${txnId}">${txnId}</span>
-                            ${catBadge}
-                        </div>
-                    </td>
-                    <td class="amount-right">
-                        ${amountCell}
-                    </td>
-                    <td>
-                        ${settlId ? `<span class="truncated utr" title="${settlId}">${settlId}</span>` : '<span style="color: var(--faint);">—</span>'}
-                    </td>
-                    <td>
-                        <span class="status-badge ${statusClass}">${status}</span>
-                    </td>
-                    <td>
-                        ${method ? `<span class="chip chip-${method}">${method}</span>` : '<span style="color: var(--faint);">—</span>'}
-                    </td>
-                    <td class="confidence-cell">
-                        ${conf != null ? (conf * 100).toFixed(0) + '%' : '—'}
-                    </td>
-                    <td>
-                        <span class="human-reason" title="${(r.reasoning||'').replace(/"/g,'&quot;')}">${humanizeReasoning(r.reasoning, method)}</span>
-                    </td>
-                    <td style="width:24px;"><span class="chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span></td>
-                </tr>
-            `}).join('');
         };
 
         const updateRecordsPagination = () => {
@@ -3466,6 +3789,8 @@
         };
 
         const onRecordsFilterChange = () => {
+            const catEl = document.getElementById('filter-category');
+            if (catEl) recordsState.categoryFilter = catEl.value;
             recordsState.statusFilter = document.getElementById('filter-status').value;
             recordsState.methodFilter = document.getElementById('filter-method').value;
             recordsState.currentPage = 1;
@@ -3483,6 +3808,7 @@
             const params = new URLSearchParams({
                 format: 'csv'
             });
+            if (recordsState.categoryFilter) params.set('category', recordsState.categoryFilter);
             if (recordsState.statusFilter) params.set('status', recordsState.statusFilter);
             if (recordsState.methodFilter) params.set('method', recordsState.methodFilter);
             

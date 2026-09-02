@@ -307,6 +307,8 @@ func GetReconciliationRecords(db *pgxpool.Pool) fiber.Handler {
 		}
 		format := c.Query("format")
 		categoryFilter := c.Query("category") // filter by record_category value
+		statusFilter := c.Query("status")     // MATCHED, UNMATCHED, DUPLICATE_SUPPRESSED
+		methodFilter := c.Query("method")     // deterministic, agent, unresolved, duplicate
 
 		ctx := context.Background()
 
@@ -425,6 +427,22 @@ func GetReconciliationRecords(db *pgxpool.Pool) fiber.Handler {
 		if categoryFilter != "" {
 			baseQuery += fmt.Sprintf(" AND rec.record_category = $%d", argIdx)
 			args = append(args, categoryFilter)
+			argIdx++
+		}
+		if statusFilter != "" {
+			if statusFilter == "MATCHED" {
+				baseQuery += " AND rec.record_category = 'matched_pair'"
+			} else if statusFilter == "UNMATCHED" {
+				baseQuery += " AND rec.record_category IN ('unmatched_vendor', 'unmatched_bank')"
+			} else if statusFilter == "DUPLICATE_SUPPRESSED" {
+				baseQuery += fmt.Sprintf(" AND (rec.vendor_recon_status = $%d OR rec.reasoning ILIKE '%%duplicate%%')", argIdx)
+				args = append(args, statusFilter)
+				argIdx++
+			}
+		}
+		if methodFilter != "" {
+			baseQuery += fmt.Sprintf(" AND rec.method = $%d", argIdx)
+			args = append(args, methodFilter)
 			argIdx++
 		}
 
