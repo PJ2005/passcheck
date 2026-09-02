@@ -708,29 +708,20 @@
             background: #FCFDFE;
         }
 
-        .audit-row {
+        tr.audit-row {
+            display: table-row !important;
             background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 12px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            border-left: 3px solid transparent;
+            transition: background 0.15s ease;
         }
 
-        .audit-row.deterministic { border-left-color: var(--success); }
-        .audit-row.agent { border-left-color: var(--primary); }
-        .audit-row.unresolved { border-left-color: var(--error); }
-        .audit-row.duplicate { border-left-color: var(--faint); }
-
-        .row-head {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 8px;
-            font-size: 12px;
+        tr.audit-row td {
+            vertical-align: middle;
         }
+
+        tr.audit-row.deterministic td:first-child { border-left: 3px solid var(--success); }
+        tr.audit-row.agent td:first-child { border-left: 3px solid var(--primary); }
+        tr.audit-row.unresolved td:first-child { border-left: 3px solid var(--error); }
+        tr.audit-row.duplicate td:first-child { border-left: 3px solid var(--faint); }
 
         .reasoning {
             font-size: 13px;
