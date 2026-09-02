@@ -331,6 +331,22 @@ func TestSimulateAllSourcesAndVerifyCounts(t *testing.T) {
 		t.Fatalf("failed to query merchant: %v", err)
 	}
 
+	// Clean up previous mock simulation data to keep test idempotent
+	_, _ = db.Pool.Exec(ctx, `
+		DELETE FROM vendor_transactions vt
+		USING vendor_integrations vi
+		WHERE vt.vendor_integration_id = vi.id
+		  AND vi.merchant_id = $1
+		  AND vi.vendor_name IN ('PhonePe', 'PineLabs')
+	`, merchantID)
+	_, _ = db.Pool.Exec(ctx, `
+		DELETE FROM bank_transactions bt
+		USING merchant_bank_accounts mba
+		WHERE bt.bank_account_id = mba.id
+		  AND mba.merchant_id = $1
+		  AND bt.source = 'setu_aa_mock'
+	`, merchantID)
+
 	if err := GenerateMockPhonePeData(ctx, db.Pool, merchantID, 10); err != nil {
 		t.Fatalf("PhonePe simulation failed: %v", err)
 	}

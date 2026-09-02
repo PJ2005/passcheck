@@ -1842,6 +1842,125 @@
             padding: 0 2px;
         }
 
+        /* Prominent Total Records Arithmetic Summary Bar */
+        .sources-summary-bar {
+            width: 100%;
+            margin-bottom: 4px;
+        }
+
+        .sources-summary-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 14px 20px;
+            background: linear-gradient(180deg, var(--surface) 0%, var(--surface-muted) 100%);
+            border: 1px solid var(--border-strong);
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+            font-size: 13px;
+        }
+
+        .summary-prefix {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .summary-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+        }
+
+        .summary-title {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--text);
+            letter-spacing: -0.01em;
+        }
+
+        .summary-equation {
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .eq-term {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 3px 9px;
+            border-radius: 6px;
+        }
+
+        .eq-num {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 13.5px;
+        }
+
+        .eq-src {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .eq-op {
+            color: var(--muted);
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .eq-tag {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 7px;
+            border-radius: 4px;
+            letter-spacing: 0.02em;
+        }
+
+        .eq-tag.vendor-tag {
+            background: rgba(14, 165, 233, 0.08);
+            color: #0284c7;
+            border: 1px solid rgba(14, 165, 233, 0.25);
+        }
+
+        .eq-tag.bank-tag {
+            background: rgba(147, 51, 234, 0.08);
+            color: #7e22ce;
+            border: 1px solid rgba(147, 51, 234, 0.25);
+        }
+
+        .eq-total-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(22, 163, 74, 0.1);
+            border: 1px solid rgba(22, 163, 74, 0.35);
+            padding: 3px 10px;
+            border-radius: 6px;
+        }
+
+        .eq-total-num {
+            font-weight: 800;
+            color: #15803d;
+            font-size: 15px;
+        }
+
+        .eq-total-sub {
+            font-size: 11px;
+            font-weight: 700;
+            color: #16a34a;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
         /* Source card step-list — animated per-source flow */
         .source-steps {
             display: flex;
@@ -2069,6 +2188,46 @@
     </div>
 
     <main>
+        <!-- Ingestion & Reconciliation Source Arithmetic Summary Line -->
+        <div class="sources-summary-bar" id="sources-summary-bar">
+            <div class="sources-summary-inner">
+                <div class="summary-prefix">
+                    <span class="summary-icon">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                    </span>
+                    <strong class="summary-title">Total records:</strong>
+                </div>
+                <div class="summary-equation">
+                    <span class="eq-term">
+                        <span class="eq-num mono" id="summary-count-razorpay">—</span>
+                        <span class="eq-src">Razorpay</span>
+                    </span>
+                    <span class="eq-op">+</span>
+                    <span class="eq-term">
+                        <span class="eq-num mono" id="summary-count-phonepe">—</span>
+                        <span class="eq-src">PhonePe</span>
+                    </span>
+                    <span class="eq-op">+</span>
+                    <span class="eq-term">
+                        <span class="eq-num mono" id="summary-count-pinelabs">—</span>
+                        <span class="eq-src">Pine Labs</span>
+                    </span>
+                    <span class="eq-tag vendor-tag">(vendor-side)</span>
+                    <span class="eq-op">+</span>
+                    <span class="eq-term">
+                        <span class="eq-num mono" id="summary-count-bank">—</span>
+                        <span class="eq-src">Bank Statement</span>
+                    </span>
+                    <span class="eq-tag bank-tag">(bank-side)</span>
+                    <span class="eq-op">=</span>
+                    <span class="eq-total-badge">
+                        <span class="eq-total-num mono" id="summary-master-total">—</span>
+                        <span class="eq-total-sub">master total</span>
+                    </span>
+                </div>
+            </div>
+        </div>
+
         <!-- KPI row — drill-down: click any number to jump to its records -->
         <div class="metrics-grid">
             <div class="metric-card clickable" role="button" tabindex="0" onclick="drillToRecords('')" onkeydown="if(event.key==='Enter') drillToRecords('')" title="View all records in Full Records">
@@ -2546,9 +2705,36 @@
                     'Pine Labs': 'src-count-pinelabs',
                     'Bank Statement (Setu AA)': 'src-count-bank'
                 };
+                const summaryCountIdMap = {
+                    'Razorpay': 'summary-count-razorpay',
+                    'PhonePe': 'summary-count-phonepe',
+                    'Pine Labs': 'summary-count-pinelabs',
+                    'Bank Statement (Setu AA)': 'summary-count-bank'
+                };
+
+                let counts = {
+                    'Razorpay': 0,
+                    'PhonePe': 0,
+                    'Pine Labs': 0,
+                    'Bank Statement (Setu AA)': 0
+                };
+
                 for (const src of sources) {
                     const cardId = idMap[src.name];
                     const countId = countIdMap[src.name];
+                    const summaryCountId = summaryCountIdMap[src.name];
+
+                    const countVal = src.record_count || 0;
+                    if (counts.hasOwnProperty(src.name)) {
+                        counts[src.name] = countVal;
+                    }
+
+                    // Update summary line with the exact single source of truth
+                    if (summaryCountId) {
+                        const sumEl = document.getElementById(summaryCountId);
+                        if (sumEl) sumEl.textContent = String(countVal);
+                    }
+
                     if (!cardId) continue;
                     const card = document.getElementById(cardId);
                     if (!card) continue;
@@ -2587,6 +2773,20 @@
                         connectEl.style.display = src.status === 'connected' ? 'none' : 'inline-flex';
                     }
                 }
+
+                // Arithmetic master total
+                const masterTotal = (counts['Razorpay'] || 0) +
+                                    (counts['PhonePe'] || 0) +
+                                    (counts['Pine Labs'] || 0) +
+                                    (counts['Bank Statement (Setu AA)'] || 0);
+                window._masterTotal = masterTotal;
+
+                const masterTotalEl = document.getElementById('summary-master-total');
+                if (masterTotalEl) masterTotalEl.textContent = String(masterTotal);
+
+                // Update Full Records tab badge with master total
+                const recBadge = document.getElementById('records-badge');
+                if (recBadge) recBadge.innerText = `${masterTotal} RECORDS`;
             } catch (e) {
                 console.warn('refreshSourceStatus failed', e);
             }
@@ -3268,7 +3468,10 @@
 
                         // 4. Records count badge
                         const recBadge = document.getElementById('records-badge');
-                        if (recBadge) recBadge.innerText = `${recData.total_count} RECORDS`;
+                        if (recBadge) {
+                            const badgeCount = window._masterTotal != null ? window._masterTotal : recData.total_count;
+                            recBadge.innerText = `${badgeCount} RECORDS`;
+                        }
 
                         updateStepper({
                             pendingCount: pendingRecords.length,
@@ -3785,7 +3988,10 @@
         };
 
         const updateRecordsBadge = () => {
-            document.getElementById('records-badge').innerText = `${recordsState.totalCount} RECORDS`;
+            const badgeVal = (window._masterTotal != null && !recordsState.categoryFilter && !recordsState.statusFilter && !recordsState.methodFilter)
+                ? window._masterTotal
+                : recordsState.totalCount;
+            document.getElementById('records-badge').innerText = `${badgeVal} RECORDS`;
         };
 
         const onRecordsFilterChange = () => {
