@@ -11,7 +11,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// This function generates synthetic data shaped like a real Setu AA response for demo purposes. It does not call Setu's API. See internal/setu/ for the actual (unused-in-demo) Setu AA client implementation.
+// GenerateMockBankStatementData generates synthetic bank_transactions rows shaped like a real Setu AA response.
+// This function's own generated bank credits (source='setu_aa_mock' and 'setu_aa_mock_duplicate')
+// are separate from the bank credits now generated inline by GenerateMockPhonePeData and
+// GenerateMockPineLabsData — those are vendor-driven matchable pairs (gateway settlement + bank credit).
+// This separation keeps each mock source's data traceable by source tag. It does not call Setu's API.
+// See internal/setu/ for the actual (unused-in-demo) Setu AA client implementation.
 func GenerateMockBankStatementData(ctx context.Context, db *pgxpool.Pool, merchantID string, count int) error {
 	if count <= 0 {
 		count = 10
@@ -146,7 +151,7 @@ func GenerateMockBankStatementData(ctx context.Context, db *pgxpool.Pool, mercha
 
 func GenerateMockPhonePeData(ctx context.Context, db *pgxpool.Pool, merchantID string, count int) error {
 	if count <= 0 {
-		count = 5
+		count = 10
 	}
 
 	// Ensure a PhonePe vendor_integration exists for this merchant.
@@ -167,28 +172,61 @@ func GenerateMockPhonePeData(ctx context.Context, db *pgxpool.Pool, merchantID s
 		}
 	}
 
-	// --- Cross-source duplicate injection (1-2 rows) ---
-	// If this merchant already has vendor data from a different integration (e.g. Razorpay
-	// from cmd/seedgen), deliberately duplicate 1-2 of those vendor_txn_id/amount/utr triples
-	// into PhonePe-tagged rows. This simulates a merchant accidentally routing the same
-	// transaction through two gateways, or a reconciliation feed being double-counted.
-	// If no other vendor's data exists yet, skip gracefully.
-	dupCount := 0
+	// Resolve bank account for matchable bank rows (same merchant's bank account)
+	var bankAccountID string
+	err = db.QueryRow(ctx, `SELECT id FROM merchant_bank_accounts WHERE merchant_id = $1 LIMIT 1`, merchantID).Scan(&bankAccountID)
+	if err != nil && err != pgx.ErrNoRows {
+		return fmt.Errorf("failed to resolve bank account for PhonePe mock: %w", err)
+	}
+	if bankAccountID == "" {
+		err = db.QueryRow(ctx, `
+			INSERT INTO merchant_bank_accounts (merchant_id, rpd_request_id, account_number, ifsc_code, verified_account_name)
+			VALUES ($1, $2, '50100234567890', 'HDFC0001234', 'MOCK PHONEPE PLACEHOLDER')
+			RETURNING id
+		`, merchantID, fmt.Sprintf("rpd_phonepe_%d", rand.Intn(1000000))).Scan(&bankAccountID)
+		if err != nil {
+			return fmt.Errorf("failed to create placeholder bank account for PhonePe mock: %w", err)
+		}
+	}
+
+	// Honest-by-design: 70% clean, 20% wrinkle, 10% orphan (minimum 1 orphan) with PhonePe's UTR-centric convention.
+	// Check internal/vendors/phonepe/client.go — PhonePe's StandardVendorTxn leaves SettlementID empty and is UTR-centric,
+	// so clean/wrinkle bank rows embed the same utr_number the vendor row uses for Tier 4 (legacy UTR+amount) matching.
+	// Orphan is a genuine "payment initiated but settlement not yet received" case, mirroring cmd/seedgen Category E.
+	orphanCount := int(math.Round(float64(count) * 0.1))
+	if orphanCount < 1 && count > 0 {
+		orphanCount = 1
+	}
+	if orphanCount > count {
+		orphanCount = count
+	}
+	remaining := count - orphanCount
+	wrinkleCount := int(math.Round(float64(count) * 0.2))
+	if wrinkleCount > remaining {
+		wrinkleCount = remaining
+	}
+	cleanCount := remaining - wrinkleCount
+
+	// Cross-source duplicate reuse: if other vendor data exists (e.g. Razorpay from seedgen), let 1-2 of the
+	// clean rows reuse an existing vendor_txn_id/amount/utr triple from a different integration. This keeps
+	// the honest 70/20/10 distribution intact while still exercising cross-source duplicate detection:
+	// those reused rows remain within the clean/wrinkle buckets and have matching bank rows, but will be
+	// flagged as vendor-side duplicates (same amount+UTR across integrations) and suppressed.
 	var dupCandidates []struct {
 		vendorTxnID string
 		amount      float64
 		utr         string
 	}
+	dupNeed := 0
 	if count >= 3 {
-		// Try to find 1-2 existing vendor txns from a different integration
-		rows, err := db.Query(ctx, `
+		rows, qErr := db.Query(ctx, `
 			SELECT vt.vendor_txn_id, vt.amount, vt.utr_number
 			FROM vendor_transactions vt
 			JOIN vendor_integrations vi ON vt.vendor_integration_id = vi.id
-			WHERE vi.merchant_id = $1 AND vi.id != $2 AND vt.utr_number IS NOT NULL
+			WHERE vi.merchant_id = $1 AND vi.id != $2 AND vt.utr_number IS NOT NULL AND vt.utr_number != ''
 			ORDER BY RANDOM() LIMIT 2
 		`, merchantID, vendorIntegrationID)
-		if err == nil {
+		if qErr == nil {
 			defer rows.Close()
 			for rows.Next() {
 				var vtid string
@@ -204,62 +242,149 @@ func GenerateMockPhonePeData(ctx context.Context, db *pgxpool.Pool, merchantID s
 			}
 			rows.Close()
 			if len(dupCandidates) > 0 {
-				// Insert 1-2 duplicates (at most count, at least 1)
-				dupCount = 1
-				if len(dupCandidates) > 1 && count > 3 && rand.Float64() < 0.5 {
-					dupCount = 2
-				}
-				if dupCount > len(dupCandidates) {
-					dupCount = len(dupCandidates)
-				}
-				for i := 0; i < dupCount; i++ {
-					cand := dupCandidates[i]
-					// Use same vendor_txn_id, amount, utr but PhonePe integration and fresh date
-					settlementDate := time.Now().AddDate(0, 0, -rand.Intn(7))
-					_, err := db.Exec(ctx, `
-						INSERT INTO vendor_transactions (vendor_integration_id, vendor_txn_id, amount, utr_number, settlement_id, settlement_date, recon_status)
-						VALUES ($1, $2, $3, $4, NULL, $5, 'UNMATCHED')
-					`, vendorIntegrationID, cand.vendorTxnID, cand.amount, cand.utr, settlementDate)
-					if err != nil {
-						return fmt.Errorf("failed to insert duplicate PhonePe vendor transaction %d: %w", i, err)
-					}
+				dupNeed = 1
+				if len(dupCandidates) > 1 && count > 5 && rand.Float64() < 0.5 {
+					dupNeed = 2
 				}
 			}
 		}
 	}
 
-	// Generate remaining synthetic vendor transactions shaped like PhonePe's StandardVendorTxn.
-	// See internal/vendors/phonepe/client.go: FetchSettlements maps PhonePe settlement
-	// response into StandardVendorTxn{ VendorTxnID, Amount, SettlementID, UTRNumber, SettlementDate, VendorName }.
-	// PhonePe's real mock in that file uses VendorTxnID = "T"+timestamp, UTR like "PP_UTR_MOCK_...", Amount 250/500.
-	// Our mock mirrors that shape but with varied amounts and dates, and leaves SettlementID empty
-	// (as the real PhonePe mapping does — PhonePe settlements in this demo are UTR-centric).
-	remaining := count - dupCount
-	for i := 0; i < remaining; i++ {
-		// Amount mimics PhonePe settlement amounts (100 to 5000 range, 2 decimals)
-		amount := math.Round((100+rand.Float64()*4900)*100) / 100
-		// VendorTxnID: PhonePe style "T" + timestamp + index, e.g. "T202501011200001"
-		vendorTxnID := fmt.Sprintf("T%s%02d", time.Now().Format("20060102150405"), rand.Intn(100))
-		// UTR: PhonePe style "PP_UTR_MOCK_..." or generic "PP_UTR_..."
+	// Helper to pick vendor identity, reusing a duplicate candidate for first dupNeed clean rows
+	nextDupIdx := 0
+	pickPhonePeIdentity := func() (string, float64, string) {
+		if nextDupIdx < dupNeed && nextDupIdx < len(dupCandidates) {
+			c := dupCandidates[nextDupIdx]
+			nextDupIdx++
+			return c.vendorTxnID, c.amount, c.utr
+		}
+		vid := fmt.Sprintf("T%s%02d", time.Now().Format("20060102150405"), rand.Intn(100))
+		amt := math.Round((100+rand.Float64()*4900)*100) / 100
 		utr := fmt.Sprintf("PP_UTR_%05d", rand.Intn(99999))
 		if rand.Float64() < 0.5 {
 			utr = fmt.Sprintf("PP_UTR_MOCK_%05d", rand.Intn(99999))
 		}
-		// SettlementDate: random within last 7 days
+		return vid, amt, utr
+	}
+
+	// Clean: exact amount, same day, narration embeds UTR — Tier 4 clean match
+	for i := 0; i < cleanCount; i++ {
+		baseVid, baseAmt, baseUtr := pickPhonePeIdentity()
+		// If this was a reused duplicate, keep its amount/utr, otherwise use generated ones
+		amount := baseAmt
+		utr := baseUtr
+		vendorTxnID := baseVid
+		if nextDupIdx <= dupNeed && dupNeed > 0 && i < dupNeed {
+			// already has reused values, keep them
+		} else if baseVid == "" {
+			// fallback (should not happen)
+			amount = math.Round((100+rand.Float64()*4900)*100) / 100
+			utr = fmt.Sprintf("PP_UTR_%05d", rand.Intn(99999))
+			vendorTxnID = fmt.Sprintf("T%s%02d", time.Now().Format("20060102150405"), rand.Intn(100))
+		}
+		// For non-duplicate clean rows that weren't reused, we already have fresh values from pick
+		// For duplicate rows, amount/utr are from candidate, vendorTxnID is reused
+		if i >= dupNeed {
+			// For non-duplicate rows, generate fresh if not already
+			if baseVid == "" {
+				// handled above
+			}
+		}
 		daysAgo := rand.Intn(7)
 		hour := 10 + rand.Intn(8)
 		min := rand.Intn(60)
 		base := time.Now().AddDate(0, 0, -daysAgo)
 		settlementDate := time.Date(base.Year(), base.Month(), base.Day(), hour, min, 0, 0, base.Location())
+		vendorID := fmt.Sprintf("%s_%04d", vendorTxnID, rand.Intn(10000))
 
-		// Insert as vendor_transactions; settlement_id left NULL to match PhonePe's real StandardVendorTxn mapping
-		// where SettlementID is empty string (PhonePe mock data is UTR-based).
 		_, err := db.Exec(ctx, `
 			INSERT INTO vendor_transactions (vendor_integration_id, vendor_txn_id, amount, utr_number, settlement_id, settlement_date, recon_status)
 			VALUES ($1, $2, $3, $4, NULL, $5, 'UNMATCHED')
-		`, vendorIntegrationID, fmt.Sprintf("%s_%04d", vendorTxnID, rand.Intn(10000)), amount, utr, settlementDate)
+		`, vendorIntegrationID, vendorID, amount, utr, settlementDate)
 		if err != nil {
 			return fmt.Errorf("failed to insert mock PhonePe vendor transaction %d: %w", i, err)
+		}
+		narration := fmt.Sprintf("UPI/PHONEPE SETL/%s/REF %09d", utr, 100000000+rand.Intn(900000000))
+		bankDate := settlementDate.Add(time.Duration(30+rand.Intn(120)) * time.Minute)
+		_, err = db.Exec(ctx, `
+			INSERT INTO bank_transactions (bank_account_id, amount, txn_type, narration, utr_number, txn_date)
+			VALUES ($1, $2, 'CREDIT', $3, $4, $5)
+		`, bankAccountID, amount, narration, utr, bankDate)
+		if err != nil {
+			return fmt.Errorf("failed to insert matching bank for PhonePe clean %d: %w", i, err)
+		}
+	}
+
+	// Wrinkle: small amount discrepancy or 1-day delay to exercise Tier 4 tolerance
+	for i := 0; i < wrinkleCount; i++ {
+		// For wrinkle rows, also allow reuse of duplicate candidates if we still have dupNeed beyond clean
+		var vendorTxnID string
+		var amount float64
+		var utr string
+		if nextDupIdx < dupNeed && nextDupIdx < len(dupCandidates) {
+			c := dupCandidates[nextDupIdx]
+			nextDupIdx++
+			vendorTxnID = c.vendorTxnID
+			amount = c.amount
+			utr = c.utr
+		} else {
+			vendorTxnID = fmt.Sprintf("T%s%02d", time.Now().Format("20060102150405"), rand.Intn(100))
+			amount = math.Round((100+rand.Float64()*4900)*100) / 100
+			utr = fmt.Sprintf("PP_UTR_%05d", rand.Intn(99999))
+			if rand.Float64() < 0.5 {
+				utr = fmt.Sprintf("PP_UTR_MOCK_%05d", rand.Intn(99999))
+			}
+		}
+		daysAgo := rand.Intn(7)
+		base := time.Now().AddDate(0, 0, -daysAgo)
+		settlementDate := time.Date(base.Year(), base.Month(), base.Day(), 10+rand.Intn(8), rand.Intn(60), 0, 0, base.Location())
+		vendorID := fmt.Sprintf("%s_%04d", vendorTxnID, rand.Intn(10000))
+
+		_, err := db.Exec(ctx, `
+			INSERT INTO vendor_transactions (vendor_integration_id, vendor_txn_id, amount, utr_number, settlement_id, settlement_date, recon_status)
+			VALUES ($1, $2, $3, $4, NULL, $5, 'UNMATCHED')
+		`, vendorIntegrationID, vendorID, amount, utr, settlementDate)
+		if err != nil {
+			return fmt.Errorf("failed to insert mock PhonePe wrinkle vendor %d: %w", i, err)
+		}
+		var bankAmount float64
+		var bankDate time.Time
+		if rand.Float64() < 0.5 {
+			factor := 0.97 + rand.Float64()*0.025
+			bankAmount = math.Round(amount*factor*100) / 100
+			bankDate = settlementDate.Add(time.Duration(30+rand.Intn(120)) * time.Minute)
+		} else {
+			bankAmount = amount
+			bankDate = settlementDate.AddDate(0, 0, 1).Add(time.Duration(rand.Intn(120)) * time.Minute)
+		}
+		narration := fmt.Sprintf("UPI/PHONEPE SETL/%s/REF %09d", utr, 100000000+rand.Intn(900000000))
+		_, err = db.Exec(ctx, `
+			INSERT INTO bank_transactions (bank_account_id, amount, txn_type, narration, utr_number, txn_date)
+			VALUES ($1, $2, 'CREDIT', $3, $4, $5)
+		`, bankAccountID, bankAmount, narration, utr, bankDate)
+		if err != nil {
+			return fmt.Errorf("failed to insert matching bank for PhonePe wrinkle %d: %w", i, err)
+		}
+	}
+
+	// Orphan: deliberately NO bank counterpart — genuine "payment initiated but settlement not yet received"
+	for i := 0; i < orphanCount; i++ {
+		amount := math.Round((100+rand.Float64()*4900)*100) / 100
+		vendorTxnID := fmt.Sprintf("T%s%02d", time.Now().Format("20060102150405"), rand.Intn(100))
+		utr := fmt.Sprintf("PP_UTR_%05d", rand.Intn(99999))
+		if rand.Float64() < 0.5 {
+			utr = fmt.Sprintf("PP_UTR_MOCK_%05d", rand.Intn(99999))
+		}
+		daysAgo := rand.Intn(7)
+		base := time.Now().AddDate(0, 0, -daysAgo)
+		settlementDate := time.Date(base.Year(), base.Month(), base.Day(), 10+rand.Intn(8), rand.Intn(60), 0, 0, base.Location())
+		vendorID := fmt.Sprintf("%s_%04d", vendorTxnID, rand.Intn(10000))
+		_, err := db.Exec(ctx, `
+			INSERT INTO vendor_transactions (vendor_integration_id, vendor_txn_id, amount, utr_number, settlement_id, settlement_date, recon_status)
+			VALUES ($1, $2, $3, $4, NULL, $5, 'UNMATCHED')
+		`, vendorIntegrationID, vendorID, amount, utr, settlementDate)
+		if err != nil {
+			return fmt.Errorf("failed to insert mock PhonePe orphan vendor %d: %w", i, err)
 		}
 	}
 
@@ -293,22 +418,48 @@ func GenerateMockPineLabsData(ctx context.Context, db *pgxpool.Pool, merchantID 
 		}
 	}
 
-	// Generate count synthetic vendor transactions shaped like Pine Labs settlement reports.
-	// Pine Labs publicly documented settlement fields (e.g. txnId, settlementId, amount, UTR, settlementDate)
-	// map to StandardVendorTxn. We generate them inline for the mock; alternatively we could call
-	// pinelabs.Provider.FetchSettlements, but that mock already generates 5-10 and doesn't accept count.
-	// Inline generation respects the requested count and keeps the flow simple.
-	for i := 0; i < count; i++ {
+	var bankAccountID string
+	err = db.QueryRow(ctx, `SELECT id FROM merchant_bank_accounts WHERE merchant_id = $1 LIMIT 1`, merchantID).Scan(&bankAccountID)
+	if err != nil && err != pgx.ErrNoRows {
+		return fmt.Errorf("failed to resolve bank account for PineLabs mock: %w", err)
+	}
+	if bankAccountID == "" {
+		err = db.QueryRow(ctx, `
+			INSERT INTO merchant_bank_accounts (merchant_id, rpd_request_id, account_number, ifsc_code, verified_account_name)
+			VALUES ($1, $2, '50100234567890', 'HDFC0001234', 'MOCK PINELABS PLACEHOLDER')
+			RETURNING id
+		`, merchantID, fmt.Sprintf("rpd_pinelabs_%d", rand.Intn(1000000))).Scan(&bankAccountID)
+		if err != nil {
+			return fmt.Errorf("failed to create placeholder bank account for PineLabs mock: %w", err)
+		}
+	}
+
+	// Honest-by-design: 70% clean, 20% wrinkle, 10% orphan — settlement_id based (Tier 1/2/3)
+	// Pine Labs already has settlement_id (unlike PhonePe which is UTR-centric), so
+	// matchable majority should exercise settlement_id tiers, not Tier 4.
+	orphanCount := int(math.Round(float64(count) * 0.1))
+	if orphanCount < 1 && count > 0 {
+		orphanCount = 1
+	}
+	if orphanCount > count {
+		orphanCount = count
+	}
+	remaining := count - orphanCount
+	wrinkleCount := int(math.Round(float64(remaining) * 0.25))
+	if wrinkleCount > remaining {
+		wrinkleCount = remaining
+	}
+	cleanCount := remaining - wrinkleCount
+
+	// Clean: full settlement_id in narration, same day
+	for i := 0; i < cleanCount; i++ {
 		amount := math.Round((200+rand.Float64()*4800)*100) / 100
-		// Pine Labs style settlement/txn IDs
 		settlementID := fmt.Sprintf("pl_setl_%s", randString(12))
 		vendorTxnID := fmt.Sprintf("PL_TXN_%s%04d", time.Now().Format("20060102"), rand.Intn(10000))
 		utr := fmt.Sprintf("PL_UTR%010d", rand.Intn(9999999999))
 		daysAgo := rand.Intn(7)
-		hour := 11 + rand.Intn(6)
-		min := rand.Intn(60)
 		base := time.Now().AddDate(0, 0, -daysAgo)
-		settlementDate := time.Date(base.Year(), base.Month(), base.Day(), hour, min, 0, 0, base.Location())
+		settlementDate := time.Date(base.Year(), base.Month(), base.Day(), 11+rand.Intn(6), rand.Intn(60), 0, 0, base.Location())
 
 		_, err := db.Exec(ctx, `
 			INSERT INTO vendor_transactions (vendor_integration_id, vendor_txn_id, amount, utr_number, settlement_id, settlement_date, recon_status)
@@ -316,6 +467,76 @@ func GenerateMockPineLabsData(ctx context.Context, db *pgxpool.Pool, merchantID 
 		`, vendorIntegrationID, vendorTxnID, amount, utr, settlementID, settlementDate)
 		if err != nil {
 			return fmt.Errorf("failed to insert mock Pine Labs vendor transaction %d: %w", i, err)
+		}
+		narration := fmt.Sprintf("NEFT CR:%s/PINE LABS SETL %s/REF %09d", utr, settlementID, 100000000+rand.Intn(900000000))
+		bankUTR := utr
+		bankDate := settlementDate.Add(time.Duration(60+rand.Intn(120)) * time.Minute)
+		bankAmount := math.Round(amount*0.98*100) / 100 // net after fee, but Tier 1 doesn't check amount
+		_, err = db.Exec(ctx, `
+			INSERT INTO bank_transactions (bank_account_id, amount, txn_type, narration, utr_number, txn_date)
+			VALUES ($1, $2, 'CREDIT', $3, $4, $5)
+		`, bankAccountID, bankAmount, narration, bankUTR, bankDate)
+		if err != nil {
+			return fmt.Errorf("failed to insert matching bank for PineLabs clean %d: %w", i, err)
+		}
+	}
+
+	// Wrinkle: truncated narration (first 8 chars) or 1-day delay — exercises Tier 3
+	for i := 0; i < wrinkleCount; i++ {
+		amount := math.Round((200+rand.Float64()*4800)*100) / 100
+		settlementID := fmt.Sprintf("pl_setl_%s", randString(12))
+		vendorTxnID := fmt.Sprintf("PL_TXN_%s%04d", time.Now().Format("20060102"), rand.Intn(10000))
+		utr := fmt.Sprintf("PL_UTR%010d", rand.Intn(9999999999))
+		daysAgo := rand.Intn(7)
+		base := time.Now().AddDate(0, 0, -daysAgo)
+		settlementDate := time.Date(base.Year(), base.Month(), base.Day(), 11+rand.Intn(6), rand.Intn(60), 0, 0, base.Location())
+
+		_, err := db.Exec(ctx, `
+			INSERT INTO vendor_transactions (vendor_integration_id, vendor_txn_id, amount, utr_number, settlement_id, settlement_date, recon_status)
+			VALUES ($1, $2, $3, $4, $5, $6, 'UNMATCHED')
+		`, vendorIntegrationID, vendorTxnID, amount, utr, settlementID, settlementDate)
+		if err != nil {
+			return fmt.Errorf("failed to insert mock Pine Labs wrinkle vendor %d: %w", i, err)
+		}
+		var narration string
+		var bankDate time.Time
+		if rand.Float64() < 0.5 {
+			// Truncated: only first 8 chars survive bank truncation
+			prefix := settlementID
+			if len(prefix) > 8 {
+				prefix = prefix[:8]
+			}
+			narration = fmt.Sprintf("NEFT CR:%s/PINE LABS SETL %s/REF %09d", utr, prefix, 100000000+rand.Intn(900000000))
+			bankDate = settlementDate.Add(time.Duration(60+rand.Intn(120)) * time.Minute)
+		} else {
+			narration = fmt.Sprintf("NEFT CR:%s/PINE LABS SETL %s/REF %09d", utr, settlementID, 100000000+rand.Intn(900000000))
+			bankDate = settlementDate.AddDate(0, 0, 1).Add(time.Duration(rand.Intn(120)) * time.Minute)
+		}
+		bankAmount := math.Round(amount*0.98*100) / 100
+		_, err = db.Exec(ctx, `
+			INSERT INTO bank_transactions (bank_account_id, amount, txn_type, narration, utr_number, txn_date)
+			VALUES ($1, $2, 'CREDIT', $3, $4, $5)
+		`, bankAccountID, bankAmount, narration, utr, bankDate)
+		if err != nil {
+			return fmt.Errorf("failed to insert matching bank for PineLabs wrinkle %d: %w", i, err)
+		}
+	}
+
+	// Orphan: intentionally no bank counterpart — genuine "payment initiated but settlement not yet received"
+	for i := 0; i < orphanCount; i++ {
+		amount := math.Round((200+rand.Float64()*4800)*100) / 100
+		settlementID := fmt.Sprintf("pl_setl_%s", randString(12))
+		vendorTxnID := fmt.Sprintf("PL_TXN_%s%04d", time.Now().Format("20060102"), rand.Intn(10000))
+		utr := fmt.Sprintf("PL_UTR%010d", rand.Intn(9999999999))
+		daysAgo := rand.Intn(7)
+		base := time.Now().AddDate(0, 0, -daysAgo)
+		settlementDate := time.Date(base.Year(), base.Month(), base.Day(), 11+rand.Intn(6), rand.Intn(60), 0, 0, base.Location())
+		_, err := db.Exec(ctx, `
+			INSERT INTO vendor_transactions (vendor_integration_id, vendor_txn_id, amount, utr_number, settlement_id, settlement_date, recon_status)
+			VALUES ($1, $2, $3, $4, $5, $6, 'UNMATCHED')
+		`, vendorIntegrationID, vendorTxnID, amount, utr, settlementID, settlementDate)
+		if err != nil {
+			return fmt.Errorf("failed to insert mock Pine Labs orphan vendor %d: %w", i, err)
 		}
 	}
 

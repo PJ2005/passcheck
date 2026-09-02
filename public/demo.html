@@ -1427,6 +1427,67 @@
             background: #F8FAFC !important;
         }
 
+        /* Transaction row enhancements — source badge, bank type, humanized reasoning */
+        .txn-source {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            display: inline-grid;
+            place-items: center;
+            font-size: 9px;
+            font-weight: 700;
+            border: 1px solid var(--border);
+            background: var(--surface-muted);
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+
+        .txn-source.razorpay { background: var(--success-bg); border-color: var(--success-border); color: var(--success); }
+        .txn-source.phonepe { background: #F0F9FF; border-color: #BAE6FD; color: #0284C7; }
+        .txn-source.pinelabs { background: #FFFBEB; border-color: #FDE68A; color: #92400E; }
+
+        .bank-type {
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 999px;
+            border: 1px solid;
+            display: inline-flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        .bank-type.credit { background: var(--success-bg); border-color: var(--success-border); color: var(--success); }
+        .bank-type.debit { background: var(--surface-muted); border-color: var(--border); color: var(--text-secondary); }
+        .bank-type.awaiting { background: var(--surface-muted); border-color: var(--border); color: var(--muted); font-style: italic; font-weight: 500; }
+
+        .human-reason {
+            font-size: 12px;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .technical-detail {
+            font-size: 11px;
+            color: var(--muted);
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 6px 8px;
+            margin-top: 6px;
+            font-family: var(--font-mono);
+            word-break: break-word;
+        }
+
+        .technical-detail-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--faint);
+            margin-bottom: 4px;
+        }
+
         /* Data Sources strip */
         .data-sources {
             max-width: 1200px;
@@ -1937,16 +1998,18 @@
                         <table>
                             <thead>
                                 <tr>
+                                    <th>Source</th>
                                     <th>Date</th>
                                     <th>Vendor Txn ID</th>
                                     <th>UTR</th>
                                     <th style="text-align:right;">Amount</th>
+                                    <th>Bank</th>
                                     <th style="width:24px;"></th>
                                 </tr>
                             </thead>
                             <tbody id="table-body">
                                 <tr>
-                                    <td colspan="5">
+                                    <td colspan="7">
                                         <div class="empty-state">
                                             <div class="empty-icon">
                                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -2455,6 +2518,65 @@
             return map[m[1]] ? `Tier ${m[1]} — ${map[m[1]]}` : `Tier ${m[1]}`;
         };
 
+        const humanizeReasoning = (reasoning, method) => {
+            const r = (reasoning || '').trim();
+            const m = (method || '').toLowerCase();
+            if (!r) {
+                if (m === 'unresolved') return "No matching bank transaction was found yet — this may still be on its way.";
+                if (m === 'duplicate') return "This looks like the same payment reported twice — we've flagged it instead of matching it again.";
+                return "Not yet evaluated — run the reconciliation engine";
+            }
+            if (r.startsWith("Tier 1:")) return "Matched automatically — the settlement ID appeared exactly in the bank statement.";
+            if (r.startsWith("Tier 2:")) return "Matched automatically — this payment was bundled with others in one bank transfer.";
+            if (r.startsWith("Tier 3:")) return "Matched automatically — the bank statement had a shortened reference, but it was unique enough to confirm.";
+            if (r.startsWith("Tier 4:")) return "Matched automatically — an older-style reference number lined up with the bank amount.";
+            if (r.includes("No bank transaction containing settlement_id") || r.includes("No bank transaction found")) {
+                return "No matching bank transaction was found yet — this may still be on its way.";
+            }
+            if (r.includes("No candidate bank transactions found")) {
+                return "No matching bank transaction was found yet — this may still be on its way.";
+            }
+            if (m === 'duplicate' || r.includes("suppressed as a duplicate") || r.includes("Identical amount+UTR")) {
+                return "This looks like the same payment reported twice — we've flagged it instead of matching it again.";
+            }
+            if (m === 'agent' && r.includes("wasn't confident enough")) {
+                return "Our AI reviewed the closest possibilities but wasn't confident enough to confirm a match automatically.";
+            }
+            if (r.includes("Agent reviewed but did not clear confidence threshold") || r.includes("did not clear confidence threshold")) {
+                return "Our AI reviewed the closest possibilities but wasn't confident enough to confirm a match automatically.";
+            }
+            if (m === 'agent') {
+                return "Our AI compared the amount, timing, and reference details and confirmed this match.";
+            }
+            if (m === 'unresolved') {
+                // Fallback for unresolved free-form
+                return r.length > 100 ? r.slice(0, 100) + "…" : r;
+            }
+            // Fallback: first ~100 chars of original
+            return r.length > 100 ? r.slice(0, 100) + "…" : r;
+        };
+
+        const sourceBadge = (vendorName) => {
+            if (!vendorName) return '<span class="txn-source" title="—">—</span>';
+            const n = vendorName.trim();
+            const lower = n.toLowerCase();
+            let letter = n.charAt(0).toUpperCase();
+            let cls = '';
+            if (lower.includes('razorpay')) { letter = 'R'; cls = 'razorpay'; }
+            else if (lower.includes('phonepe')) { letter = 'P'; cls = 'phonepe'; }
+            else if (lower.includes('pine')) { letter = 'PL'; cls = 'pinelabs'; }
+            else if (lower.includes('bank')) { letter = 'B'; cls = ''; }
+            return `<span class="txn-source ${cls}" title="${n}">${letter}</span>`;
+        };
+
+        const bankTypeBadge = (bankTxnType) => {
+            if (!bankTxnType) return '<span class="bank-type awaiting">Awaiting bank credit</span>';
+            const t = bankTxnType.toString().toUpperCase();
+            if (t === 'CREDIT') return '<span class="bank-type credit">Credit</span>';
+            if (t === 'DEBIT') return '<span class="bank-type debit">Debit</span>';
+            return `<span class="bank-type" title="${bankTxnType}">${bankTxnType}</span>`;
+        };
+
         const buildReceiptHTML = (rec) => {
             // rec: { method, confidence, reasoning, decided_at, settlement_id, recon_status, vendor_txn_id, amount }
             if (!rec || (!rec.method && !rec.reasoning && !rec.recon_status)) {
@@ -2484,9 +2606,12 @@
             } else if (method === 'duplicate') {
                 if (rec.confidence != null) html += `<div class="receipt-row"><span class="receipt-label">Confidence</span><span class="receipt-value mono">${(rec.confidence*100).toFixed(0)}%</span></div>`;
             }
-            // Reasoning (full, not truncated)
-            const reasoning = rec.reasoning ? rec.reasoning : (method === 'unresolved' ? 'No match found at any tier — see Exceptions tab' : '—');
-            html += `<div class="receipt-row"><span class="receipt-label">Reasoning</span><span class="receipt-value">${reasoning.replace(/</g,'&lt;')}</span></div>`;
+            // Humanized summary (default) + technical detail on demand
+            const human = humanizeReasoning(rec.reasoning, method);
+            html += `<div class="receipt-row"><span class="receipt-label">Summary</span><span class="receipt-value human-reason">${human}</span></div>`;
+            if (rec.reasoning && rec.reasoning.trim() !== human.trim()) {
+                html += `<div class="receipt-row"><span class="receipt-label">Technical detail</span><span class="receipt-value technical-detail">${rec.reasoning.replace(/</g,'&lt;')}</span></div>`;
+            }
             // Decided at
             if (rec.decided_at) {
                 html += `<div class="receipt-meta">Decided ${formatDecidedAt(rec.decided_at)} • ${new Date(rec.decided_at).toLocaleString('en-IN')}</div>`;
@@ -2725,10 +2850,10 @@
                             row.classList.add('row-leave');
                         });
                         setTimeout(() => {
-                            tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">✓</div><div class="empty-title">All settled</div><div class="empty-desc">Every seeded transaction has been matched. Open <strong>Audit Trail</strong> to review, or <strong>Full Records → Export CSV</strong>.</div></div></td></tr>`;
+                            tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">✓</div><div class="empty-title">All settled</div><div class="empty-desc">Every seeded transaction has been matched. Open <strong>Audit Trail</strong> to review, or <strong>Full Records → Export CSV</strong>.</div></div></td></tr>`;
                         }, 350);
                     } else {
-                        tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="empty-title">No pending transactions</div><div class="empty-desc">Click <strong>Check Data</strong> to verify, or run <code>go run ./cmd/seedgen</code> to generate demo data.</div></div></td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="empty-title">No pending transactions</div><div class="empty-desc">Click <strong>Check Data</strong> to verify, or run <code>go run ./cmd/seedgen</code> to generate demo data.</div></div></td></tr>`;
                     }
                     currentPendingIds = newIds;
                     return;
@@ -2740,10 +2865,12 @@
                     const escId = txn.vendor_txn_id.replace(/'/g, "\\'");
                     html += `
                         <tr id="row-${txn.vendor_txn_id}" class="${isNew ? 'row-enter' : ''} expandable-row" onclick="handlePendingExpand(this, '${escId}')">
+                            <td>${sourceBadge(txn.vendor_name)}</td>
                             <td>${txn.date}</td>
-                            <td><span class="utr">${txn.vendor_txn_id}</span></td>
-                            <td><span class="utr">${txn.utr_number}</span></td>
+                            <td><span class="truncated utr" title="${txn.vendor_txn_id}">${txn.vendor_txn_id}</span></td>
+                            <td><span class="truncated utr" title="${txn.utr_number}">${txn.utr_number}</span></td>
                             <td style="text-align:right;" class="amount">₹${formatCurrency(txn.amount)}</td>
+                            <td>${bankTypeBadge(txn.bank_txn_type)}</td>
                             <td style="width:24px;"><span class="chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span></td>
                         </tr>
                     `;
@@ -2826,12 +2953,14 @@
                 return `
                 <div class="audit-row unresolved expandable-row" onclick="handleExceptionExpand(this, '${esc}')">
                     <div class="row-head">
-                        <span class="utr">${e.vendor_txn_id}</span>
+                        ${sourceBadge(e.vendor_name)}
+                        <span class="truncated utr" title="${e.vendor_txn_id}">${e.vendor_txn_id}</span>
                         <span class="amount">₹${formatCurrency(e.amount)}</span>
-                        ${e.settlement_id ? `<span class="utr">${e.settlement_id}</span>` : ''}
+                        ${e.settlement_id ? `<span class="truncated utr" title="${e.settlement_id}">${e.settlement_id}</span>` : ''}
+                        ${bankTypeBadge(e.bank_txn_type)}
                         <span class="chevron" style="margin-left:auto;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
                     </div>
-                    <div class="reasoning">${e.reasoning}</div>
+                    <div class="human-reason">${humanizeReasoning(e.reasoning, 'unresolved')}</div>
                 </div>
             `}).join('');
         };
@@ -2849,13 +2978,15 @@
                 return `
                 <div class="audit-row ${m.method} expandable-row" onclick="handleDecisionExpand(this, '${esc}')">
                     <div class="row-head">
+                        ${sourceBadge(m.vendor_name)}
                         <span class="chip chip-${m.method}">${m.method}</span>
                         <span class="conf">${(m.confidence * 100).toFixed(0)}% confidence</span>
-                        <span class="utr">${m.vendor_txn_id}</span>
+                        <span class="truncated utr" title="${m.vendor_txn_id}">${m.vendor_txn_id}</span>
                         <span class="amount">₹${formatCurrency(m.amount)}</span>
+                        ${bankTypeBadge(m.bank_txn_type)}
                         <span class="chevron" style="margin-left:auto;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
                     </div>
-                    <div class="reasoning">${m.reasoning}</div>
+                    <div class="human-reason">${humanizeReasoning(m.reasoning, m.method)}</div>
                 </div>
             `}).join('');
         };
@@ -3269,9 +3400,15 @@
                 return `
                 <tr class="${r.method || ''} expandable-row" onclick="handleRecordExpand(this, '${esc}')">
                     <td>
-                        <span class="truncated utr" title="${r.vendor_txn_id}">${r.vendor_txn_id}</span>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            ${sourceBadge(r.vendor_name)}
+                            <span class="truncated utr" title="${r.vendor_txn_id}">${r.vendor_txn_id}</span>
+                        </div>
                     </td>
-                    <td class="amount-right">₹${formatCurrency(r.amount)}</td>
+                    <td class="amount-right">
+                        <div>₹${formatCurrency(r.amount)}</div>
+                        <div style="margin-top:4px; display:flex; justify-content:flex-end;">${bankTypeBadge(r.bank_txn_type)}</div>
+                    </td>
                     <td>
                         ${r.settlement_id ? `<span class="truncated utr" title="${r.settlement_id}">${r.settlement_id}</span>` : '<span style="color: var(--faint);">—</span>'}
                     </td>
@@ -3285,7 +3422,7 @@
                         ${r.confidence != null ? (r.confidence * 100).toFixed(0) + '%' : '—'}
                     </td>
                     <td>
-                        <span class="reasoning-wrap" title="${(r.reasoning||'').replace(/"/g,'&quot;')}">${r.reasoning || '—'}</span>
+                        <span class="human-reason" title="${(r.reasoning||'').replace(/"/g,'&quot;')}">${humanizeReasoning(r.reasoning, r.method)}</span>
                     </td>
                     <td style="width:24px;"><span class="chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span></td>
                 </tr>

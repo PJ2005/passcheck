@@ -13,10 +13,12 @@ import (
 
 // PendingTransaction represents a single unmatched record in the dashboard
 type PendingTransaction struct {
-	VendorTxnID string  `json:"vendor_txn_id"`
-	Amount      float64 `json:"amount"`
-	UTRNumber   string  `json:"utr_number"`
-	Date        string  `json:"date"`
+	VendorTxnID  string  `json:"vendor_txn_id"`
+	Amount       float64 `json:"amount"`
+	UTRNumber    string  `json:"utr_number"`
+	Date         string  `json:"date"`
+	VendorName   *string `json:"vendor_name,omitempty"`
+	BankTxnType  *string `json:"bank_txn_type,omitempty"`
 }
 
 // ExceptionEntry is an UNMATCHED vendor transaction paired with the audit
@@ -26,17 +28,21 @@ type ExceptionEntry struct {
 	Amount       float64 `json:"amount"`
 	SettlementID *string `json:"settlement_id"`
 	Reasoning    string  `json:"reasoning"`
+	VendorName   *string `json:"vendor_name,omitempty"`
+	BankTxnType  *string `json:"bank_txn_type,omitempty"`
 }
 
 // MatchEntry explains WHY a recent match succeeded - tier method, confidence,
 // and the engine's own reasoning - so decisions are transparent to judges
 // and reviewers instead of being an opaque status flip.
 type MatchEntry struct {
-	VendorTxnID string  `json:"vendor_txn_id"`
-	Amount      float64 `json:"amount"`
-	Method      string  `json:"method"`
-	Confidence  float64 `json:"confidence"`
-	Reasoning   string  `json:"reasoning"`
+	VendorTxnID  string  `json:"vendor_txn_id"`
+	Amount       float64 `json:"amount"`
+	Method       string  `json:"method"`
+	Confidence   float64 `json:"confidence"`
+	Reasoning    string  `json:"reasoning"`
+	VendorName   *string `json:"vendor_name,omitempty"`
+	BankTxnType  *string `json:"bank_txn_type,omitempty"`
 }
 
 // GetReconciliationDashboard returns the metrics and pending list for the demo showcase
@@ -68,9 +74,18 @@ func GetReconciliationDashboard(db *pgxpool.Pool) fiber.Handler {
 
 		// 2. Fetch the specific pending transactions
 		rows, err := db.Query(ctx, `
-			SELECT vt.vendor_txn_id, vt.amount, vt.utr_number, vt.settlement_date
+			SELECT vt.vendor_txn_id, vt.amount, vt.utr_number, vt.settlement_date,
+			       vi.vendor_name, bt.txn_type
 			FROM vendor_transactions vt
 			JOIN vendor_integrations vi ON vt.vendor_integration_id = vi.id
+			LEFT JOIN LATERAL (
+				SELECT r.bank_transaction_id
+				FROM reconciliation_log r
+				WHERE r.vendor_transaction_id = vt.id
+				ORDER BY r.created_at DESC
+				LIMIT 1
+			) rl ON true
+			LEFT JOIN bank_transactions bt ON bt.id = rl.bank_transaction_id
 			WHERE vi.merchant_id = $1 AND vt.recon_status = 'UNMATCHED'
 			ORDER BY vt.settlement_date DESC
 		`, merchantID)
@@ -84,7 +99,7 @@ func GetReconciliationDashboard(db *pgxpool.Pool) fiber.Handler {
 		for rows.Next() {
 			var txn PendingTransaction
 			var t time.Time
-			if err := rows.Scan(&txn.VendorTxnID, &txn.Amount, &txn.UTRNumber, &t); err == nil {
+			if err := rows.Scan(&txn.VendorTxnID, &txn.Amount, &txn.UTRNumber, &t, &txn.VendorName, &txn.BankTxnType); err == nil {
 				txn.Date = t.Format("2006-01-02")
 				pendingTxns = append(pendingTxns, txn)
 			}
@@ -111,16 +126,18 @@ func GetReconciliationDashboard(db *pgxpool.Pool) fiber.Handler {
 		// recent 'unresolved' audit entry, capped at 20 to bound the response.
 		exceptions := []ExceptionEntry{}
 		exRows, err := db.Query(ctx, `
-			SELECT vt.vendor_txn_id, vt.amount, vt.settlement_id, COALESCE(rl.reasoning, '')
+			SELECT vt.vendor_txn_id, vt.amount, vt.settlement_id, COALESCE(rl.reasoning, ''),
+			       vi.vendor_name, bt.txn_type
 			FROM vendor_transactions vt
 			JOIN vendor_integrations vi ON vt.vendor_integration_id = vi.id
 			CROSS JOIN LATERAL (
-				SELECT r.reasoning, r.created_at
+				SELECT r.reasoning, r.created_at, r.bank_transaction_id
 				FROM reconciliation_log r
 				WHERE r.vendor_transaction_id = vt.id AND r.method = 'unresolved'
 				ORDER BY r.created_at DESC
 				LIMIT 1
 			) rl
+			LEFT JOIN bank_transactions bt ON bt.id = rl.bank_transaction_id
 			WHERE vi.merchant_id = $1 AND vt.recon_status = 'UNMATCHED'
 			ORDER BY rl.created_at DESC
 			LIMIT 20
@@ -131,7 +148,7 @@ func GetReconciliationDashboard(db *pgxpool.Pool) fiber.Handler {
 		defer exRows.Close()
 		for exRows.Next() {
 			var e ExceptionEntry
-			if err := exRows.Scan(&e.VendorTxnID, &e.Amount, &e.SettlementID, &e.Reasoning); err == nil {
+			if err := exRows.Scan(&e.VendorTxnID, &e.Amount, &e.SettlementID, &e.Reasoning, &e.VendorName, &e.BankTxnType); err == nil {
 				exceptions = append(exceptions, e)
 			}
 		}
@@ -145,19 +162,21 @@ func GetReconciliationDashboard(db *pgxpool.Pool) fiber.Handler {
 			WITH ranked AS (
 				SELECT vt.vendor_txn_id, vt.amount, rl.method, rl.confidence,
 				       COALESCE(rl.reasoning, '') AS reasoning,
+				       vi.vendor_name, bt.txn_type,
 				       ROW_NUMBER() OVER (PARTITION BY rl.confidence ORDER BY rl.created_at DESC) AS rn
 				FROM vendor_transactions vt
 				JOIN vendor_integrations vi ON vt.vendor_integration_id = vi.id
 				CROSS JOIN LATERAL (
-					SELECT r.method, r.confidence, r.reasoning, r.created_at
+					SELECT r.method, r.confidence, r.reasoning, r.created_at, r.bank_transaction_id
 					FROM reconciliation_log r
 					WHERE r.vendor_transaction_id = vt.id AND r.method = 'deterministic'
 					ORDER BY r.created_at DESC
 					LIMIT 1
 				) rl
+				LEFT JOIN bank_transactions bt ON bt.id = rl.bank_transaction_id
 				WHERE vi.merchant_id = $1 AND vt.recon_status = 'MATCHED'
 			)
-			SELECT vendor_txn_id, amount, method, confidence, reasoning
+			SELECT vendor_txn_id, amount, method, confidence, reasoning, vendor_name, txn_type
 			FROM ranked
 			ORDER BY rn ASC, confidence ASC
 			LIMIT 10
@@ -168,7 +187,7 @@ func GetReconciliationDashboard(db *pgxpool.Pool) fiber.Handler {
 		defer rmRows.Close()
 		for rmRows.Next() {
 			var m MatchEntry
-			if err := rmRows.Scan(&m.VendorTxnID, &m.Amount, &m.Method, &m.Confidence, &m.Reasoning); err == nil {
+			if err := rmRows.Scan(&m.VendorTxnID, &m.Amount, &m.Method, &m.Confidence, &m.Reasoning, &m.VendorName, &m.BankTxnType); err == nil {
 				recentMatches = append(recentMatches, m)
 			}
 		}
@@ -216,16 +235,18 @@ func GetReconciliationDashboard(db *pgxpool.Pool) fiber.Handler {
 // ReconciliationRecord represents a full reconciliation decision record
 // for the complete audit trail endpoint.
 type ReconciliationRecord struct {
-	VendorTxnID     string   `json:"vendor_txn_id"`
-	Amount          float64  `json:"amount"`
-	SettlementID    *string  `json:"settlement_id,omitempty"`
-	UTRNumber       string   `json:"utr_number"`
-	SettlementDate  string   `json:"settlement_date"`
-	ReconStatus     string   `json:"recon_status"`
-	Method          *string  `json:"method,omitempty"`
-	Confidence      *float64 `json:"confidence,omitempty"`
-	Reasoning       *string  `json:"reasoning,omitempty"`
-	DecidedAt       *string  `json:"decided_at,omitempty"`
+	VendorTxnID    string   `json:"vendor_txn_id"`
+	Amount         float64  `json:"amount"`
+	SettlementID   *string  `json:"settlement_id,omitempty"`
+	UTRNumber      string   `json:"utr_number"`
+	SettlementDate string   `json:"settlement_date"`
+	ReconStatus    string   `json:"recon_status"`
+	Method         *string  `json:"method,omitempty"`
+	Confidence     *float64 `json:"confidence,omitempty"`
+	Reasoning      *string  `json:"reasoning,omitempty"`
+	DecidedAt      *string  `json:"decided_at,omitempty"`
+	VendorName     *string  `json:"vendor_name,omitempty"`
+	BankTxnType    *string  `json:"bank_txn_type,omitempty"`
 }
 
 // ReconciliationRecordsResponse is the JSON envelope for paginated results.
@@ -273,12 +294,13 @@ func GetReconciliationRecords(db *pgxpool.Pool) fiber.Handler {
 			FROM vendor_transactions vt
 			JOIN vendor_integrations vi ON vt.vendor_integration_id = vi.id
 			LEFT JOIN LATERAL (
-				SELECT r.method, r.confidence, r.reasoning, r.created_at
+				SELECT r.method, r.confidence, r.reasoning, r.created_at, r.bank_transaction_id
 				FROM reconciliation_log r
 				WHERE r.vendor_transaction_id = vt.id
 				ORDER BY r.created_at DESC
 				LIMIT 1
 			) rl ON true
+			LEFT JOIN bank_transactions bt ON bt.id = rl.bank_transaction_id
 			WHERE vi.merchant_id = $1
 		`
 		args := []any{merchantID}
@@ -317,7 +339,8 @@ func GetReconciliationRecords(db *pgxpool.Pool) fiber.Handler {
 		selectQuery := `
 			SELECT vt.vendor_txn_id, vt.amount, vt.settlement_id, vt.utr_number,
 			       vt.settlement_date, vt.recon_status,
-			       rl.method, rl.confidence, rl.reasoning, rl.created_at
+			       rl.method, rl.confidence, rl.reasoning, rl.created_at,
+			       vi.vendor_name, bt.txn_type
 		` + baseQuery + `
 			ORDER BY vt.settlement_date DESC
 			LIMIT $` + strconv.Itoa(argIdx) + ` OFFSET $` + strconv.Itoa(argIdx+1)
@@ -345,6 +368,8 @@ func GetReconciliationRecords(db *pgxpool.Pool) fiber.Handler {
 				&rec.Confidence,
 				&rec.Reasoning,
 				&decidedAt,
+				&rec.VendorName,
+				&rec.BankTxnType,
 			); err == nil {
 				rec.SettlementDate = settlementDate.Format("2006-01-02")
 				if decidedAt != nil {
@@ -374,7 +399,8 @@ func streamCSVExport(c *fiber.Ctx, db *pgxpool.Pool, ctx context.Context, baseQu
 	selectQuery := `
 		SELECT vt.vendor_txn_id, vt.amount, vt.settlement_id, vt.utr_number,
 		       vt.settlement_date, vt.recon_status,
-		       rl.method, rl.confidence, rl.reasoning, rl.created_at
+		       rl.method, rl.confidence, rl.reasoning, rl.created_at,
+		       vi.vendor_name, bt.txn_type
 	` + baseQuery + `
 		ORDER BY vt.settlement_date DESC
 	`
@@ -395,7 +421,7 @@ func streamCSVExport(c *fiber.Ctx, db *pgxpool.Pool, ctx context.Context, baseQu
 	writer := csv.NewWriter(c.Response().BodyWriter())
 
 	// Write header
-	header := []string{"vendor_txn_id", "amount", "settlement_id", "utr_number", "settlement_date", "recon_status", "method", "confidence", "reasoning", "decided_at"}
+	header := []string{"vendor_txn_id", "amount", "settlement_id", "utr_number", "settlement_date", "recon_status", "vendor_name", "bank_txn_type", "method", "confidence", "reasoning", "decided_at"}
 	if err := writer.Write(header); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to write CSV header", "details": err.Error()})
 	}
@@ -404,12 +430,12 @@ func streamCSVExport(c *fiber.Ctx, db *pgxpool.Pool, ctx context.Context, baseQu
 	for rows.Next() {
 		var vendorTxnID, utrNumber, reconStatus string
 		var amount float64
-		var settlementID, method, reasoning *string
+		var settlementID, method, reasoning, vendorName, bankTxnType *string
 		var confidence *float64
 		var settlementDate time.Time
 		var decidedAt *time.Time
 
-		if err := rows.Scan(&vendorTxnID, &amount, &settlementID, &utrNumber, &settlementDate, &reconStatus, &method, &confidence, &reasoning, &decidedAt); err != nil {
+		if err := rows.Scan(&vendorTxnID, &amount, &settlementID, &utrNumber, &settlementDate, &reconStatus, &method, &confidence, &reasoning, &decidedAt, &vendorName, &bankTxnType); err != nil {
 			continue
 		}
 
@@ -420,6 +446,8 @@ func streamCSVExport(c *fiber.Ctx, db *pgxpool.Pool, ctx context.Context, baseQu
 			utrNumber,
 			settlementDate.Format("2006-01-02"),
 			reconStatus,
+			derefString(vendorName, ""),
+			derefString(bankTxnType, ""),
 			derefString(method, ""),
 			derefFloat64(confidence, ""),
 			derefString(reasoning, ""),
