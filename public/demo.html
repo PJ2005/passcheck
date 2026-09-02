@@ -3378,35 +3378,67 @@
             }
 
             tbody.innerHTML = records.map(r => {
-                const esc = (r.vendor_txn_id || '').replace(/'/g, "\\'");
-                const isBank = r.record_type === 'bank' || r.side === 'bank';
+                const cat = r.record_category || 'unmatched_vendor';
+                const isMatchedPair  = cat === 'matched_pair';
+                const isUnmatchedBank = cat === 'unmatched_bank';
+
+                // Determine display values based on category
+                const txnId      = isUnmatchedBank ? (r.bank_txn_id || '—') : (r.vendor_txn_id || '—');
+                const esc        = txnId.replace(/'/g, "\\'");
+                const sourceName = isUnmatchedBank ? 'Bank Statement' : (r.vendor_source || '—');
+                const amount     = isUnmatchedBank ? r.bank_amount : r.vendor_amount;
+                const settlId    = isUnmatchedBank ? null : r.vendor_settlement_id;
+                const status     = isUnmatchedBank ? 'UNMATCHED' : (r.vendor_recon_status || '—');
+                const method     = r.method || null;
+                const conf       = r.confidence;
+
+                // Category badge
+                let catBadge = '';
+                if (isMatchedPair) {
+                    catBadge = `<span class="side-badge vendor" style="background:rgba(22,163,74,0.08);border-color:rgba(22,163,74,0.3);color:#15803d;">Matched Pair</span>`;
+                } else if (isUnmatchedBank) {
+                    catBadge = `<span class="side-badge bank">Bank Statement</span>`;
+                } else {
+                    catBadge = `<span class="side-badge vendor">Vendor Ledger</span>`;
+                }
+
+                // Amount cell — for matched pairs, show both vendor and bank amounts
+                let amountCell = `<div>₹${formatCurrency(amount)}</div>`;
+                if (isMatchedPair && r.bank_amount != null && Math.abs(r.bank_amount - r.vendor_amount) > 0.001) {
+                    amountCell += `<div style="font-size:10px;color:var(--muted);margin-top:2px;">Bank: ₹${formatCurrency(r.bank_amount)}</div>`;
+                }
+                if (isMatchedPair || isUnmatchedBank) {
+                    amountCell += `<div style="margin-top:4px;display:flex;justify-content:flex-end;">${bankTypeBadge(r.bank_txn_type)}</div>`;
+                }
+
+                const statusClass = status === 'MATCHED' ? 'status-matched' : status === 'DUPLICATE_SUPPRESSED' ? 'status-duplicate' : 'status-unmatched';
+
                 return `
-                <tr class="${r.method || ''} expandable-row" onclick="handleRecordExpand(this, '${esc}')">
+                <tr class="${method || ''} expandable-row" onclick="handleRecordExpand(this, '${esc}')">
                     <td>
                         <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                            ${sourceBadge(r.vendor_name)}
-                            <span class="truncated utr" title="${r.vendor_txn_id}">${r.vendor_txn_id}</span>
-                            <span class="side-badge ${isBank ? 'bank' : 'vendor'}">${isBank ? 'Bank Statement' : 'Vendor Ledger'}</span>
+                            ${sourceBadge(sourceName)}
+                            <span class="truncated utr" title="${txnId}">${txnId}</span>
+                            ${catBadge}
                         </div>
                     </td>
                     <td class="amount-right">
-                        <div>₹${formatCurrency(r.amount)}</div>
-                        ${isBank ? `<div style="margin-top:4px; display:flex; justify-content:flex-end;">${bankTypeBadge(r.bank_txn_type)}</div>` : ''}
+                        ${amountCell}
                     </td>
                     <td>
-                        ${r.settlement_id ? `<span class="truncated utr" title="${r.settlement_id}">${r.settlement_id}</span>` : '<span style="color: var(--faint);">—</span>'}
+                        ${settlId ? `<span class="truncated utr" title="${settlId}">${settlId}</span>` : '<span style="color: var(--faint);">—</span>'}
                     </td>
                     <td>
-                        <span class="status-badge ${r.recon_status === 'MATCHED' ? 'status-matched' : r.recon_status === 'DUPLICATE_SUPPRESSED' ? 'status-duplicate' : 'status-unmatched'}">${r.recon_status}</span>
+                        <span class="status-badge ${statusClass}">${status}</span>
                     </td>
                     <td>
-                        ${r.method ? `<span class="chip chip-${r.method}">${r.method}</span>` : '<span style="color: var(--faint);">—</span>'}
+                        ${method ? `<span class="chip chip-${method}">${method}</span>` : '<span style="color: var(--faint);">—</span>'}
                     </td>
                     <td class="confidence-cell">
-                        ${r.confidence != null ? (r.confidence * 100).toFixed(0) + '%' : '—'}
+                        ${conf != null ? (conf * 100).toFixed(0) + '%' : '—'}
                     </td>
                     <td>
-                        <span class="human-reason" title="${(r.reasoning||'').replace(/"/g,'&quot;')}">${humanizeReasoning(r.reasoning, r.method)}</span>
+                        <span class="human-reason" title="${(r.reasoning||'').replace(/"/g,'&quot;')}">${humanizeReasoning(r.reasoning, method)}</span>
                     </td>
                     <td style="width:24px;"><span class="chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span></td>
                 </tr>

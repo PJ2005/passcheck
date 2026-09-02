@@ -13,12 +13,12 @@ import (
 
 // PendingTransaction represents a single unmatched record in the dashboard
 type PendingTransaction struct {
-	VendorTxnID  string  `json:"vendor_txn_id"`
-	Amount       float64 `json:"amount"`
-	UTRNumber    string  `json:"utr_number"`
-	Date         string  `json:"date"`
-	VendorName   *string `json:"vendor_name,omitempty"`
-	BankTxnType  *string `json:"bank_txn_type,omitempty"`
+	VendorTxnID string  `json:"vendor_txn_id"`
+	Amount      float64 `json:"amount"`
+	UTRNumber   string  `json:"utr_number"`
+	Date        string  `json:"date"`
+	VendorName  *string `json:"vendor_name,omitempty"`
+	BankTxnType *string `json:"bank_txn_type,omitempty"`
 }
 
 // ExceptionEntry is an UNMATCHED vendor transaction paired with the audit
@@ -36,13 +36,13 @@ type ExceptionEntry struct {
 // and the engine's own reasoning - so decisions are transparent to judges
 // and reviewers instead of being an opaque status flip.
 type MatchEntry struct {
-	VendorTxnID  string  `json:"vendor_txn_id"`
-	Amount       float64 `json:"amount"`
-	Method       string  `json:"method"`
-	Confidence   float64 `json:"confidence"`
-	Reasoning    string  `json:"reasoning"`
-	VendorName   *string `json:"vendor_name,omitempty"`
-	BankTxnType  *string `json:"bank_txn_type,omitempty"`
+	VendorTxnID string  `json:"vendor_txn_id"`
+	Amount      float64 `json:"amount"`
+	Method      string  `json:"method"`
+	Confidence  float64 `json:"confidence"`
+	Reasoning   string  `json:"reasoning"`
+	VendorName  *string `json:"vendor_name,omitempty"`
+	BankTxnType *string `json:"bank_txn_type,omitempty"`
 }
 
 // GetReconciliationDashboard returns the metrics and pending list for the demo showcase
@@ -59,7 +59,7 @@ func GetReconciliationDashboard(db *pgxpool.Pool) fiber.Handler {
 		var totalExpected, totalSettled, totalPending float64
 
 		err := db.QueryRow(ctx, `
-			SELECT 
+			SELECT
 				COALESCE(SUM(vt.amount), 0) as total_expected,
 				COALESCE(SUM(CASE WHEN vt.recon_status = 'MATCHED' THEN vt.amount ELSE 0 END), 0) as total_settled,
 				COALESCE(SUM(CASE WHEN vt.recon_status = 'UNMATCHED' THEN vt.amount ELSE 0 END), 0) as total_pending
@@ -105,7 +105,6 @@ func GetReconciliationDashboard(db *pgxpool.Pool) fiber.Handler {
 			}
 		}
 
-		// Prevent returning nil slice (which encodes to JSON null instead of [])
 		if pendingTxns == nil {
 			pendingTxns = []PendingTransaction{}
 		}
@@ -192,10 +191,7 @@ func GetReconciliationDashboard(db *pgxpool.Pool) fiber.Handler {
 			}
 		}
 
-		// 6. Method breakdown: how many decisions each layer made. Seeded with
-		// all four methods so an honest zero stays visible in the JSON (e.g.
-		// agent: 0 proves the deterministic pass did all the work, duplicate: 0
-		// proves no cross-source duplicates were suppressed).
+		// 6. Method breakdown
 		methodBreakdown := map[string]int{"deterministic": 0, "agent": 0, "unresolved": 0, "duplicate": 0}
 		mbRows, err := db.Query(ctx, `
 			SELECT rl.method, COUNT(*)
@@ -217,52 +213,80 @@ func GetReconciliationDashboard(db *pgxpool.Pool) fiber.Handler {
 			}
 		}
 
-		// 7. Return JSON payload
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
-			"merchant_id":           merchantID,
-			"total_expected_funds":  totalExpected,
-			"total_settled_funds":   totalSettled,
-			"total_pending_funds":   totalPending,
-			"pending_transactions":  pendingTxns,
-			"exception_count":       exceptionCount,
-			"exceptions":            exceptions,
-			"recent_matches":        recentMatches,
-			"method_breakdown":      methodBreakdown,
+			"merchant_id":          merchantID,
+			"total_expected_funds": totalExpected,
+			"total_settled_funds":  totalSettled,
+			"total_pending_funds":  totalPending,
+			"pending_transactions": pendingTxns,
+			"exception_count":      exceptionCount,
+			"exceptions":           exceptions,
+			"recent_matches":       recentMatches,
+			"method_breakdown":     methodBreakdown,
 		})
 	}
 }
 
-// ReconciliationRecord represents a full reconciliation decision record
-// for the complete audit trail endpoint.
-type ReconciliationRecord struct {
-	VendorTxnID    string   `json:"vendor_txn_id"`
-	Amount         float64  `json:"amount"`
-	SettlementID   *string  `json:"settlement_id,omitempty"`
-	UTRNumber      string   `json:"utr_number"`
-	SettlementDate string   `json:"settlement_date"`
-	ReconStatus    string   `json:"recon_status"`
-	Method         *string  `json:"method,omitempty"`
-	Confidence     *float64 `json:"confidence,omitempty"`
-	Reasoning      *string  `json:"reasoning,omitempty"`
-	DecidedAt      *string  `json:"decided_at,omitempty"`
-	VendorName     *string  `json:"vendor_name,omitempty"`
-	BankTxnType    *string  `json:"bank_txn_type,omitempty"`
-	RecordType     string   `json:"record_type"` // "vendor" or "bank"
-	Side           string   `json:"side"`        // "vendor" or "bank"
+// AuditRecord is the unified three-category record returned by GetReconciliationRecords.
+// record_category is always one of "matched_pair", "unmatched_vendor", or "unmatched_bank".
+//
+// matched_pair: both vendor_* and bank_* fields are fully populated.
+// unmatched_vendor: bank_* fields are null/absent.
+// unmatched_bank: vendor_* fields are null/absent.
+type AuditRecord struct {
+	RecordCategory string `json:"record_category"` // "matched_pair" | "unmatched_vendor" | "unmatched_bank"
+
+	// Vendor-side fields (null for unmatched_bank)
+	VendorTxnID          *string  `json:"vendor_txn_id,omitempty"`
+	VendorAmount         *float64 `json:"vendor_amount,omitempty"`
+	VendorSettlementID   *string  `json:"vendor_settlement_id,omitempty"`
+	VendorUTR            *string  `json:"vendor_utr,omitempty"`
+	VendorSettlementDate *string  `json:"vendor_settlement_date,omitempty"`
+	VendorSource         *string  `json:"vendor_source,omitempty"` // Razorpay / PhonePe / PineLabs
+	VendorReconStatus    *string  `json:"vendor_recon_status,omitempty"`
+
+	// Bank-side fields (null for unmatched_vendor)
+	BankTxnID     *string  `json:"bank_txn_id,omitempty"`
+	BankAmount    *float64 `json:"bank_amount,omitempty"`
+	BankUTR       *string  `json:"bank_utr,omitempty"`
+	BankNarration *string  `json:"bank_narration,omitempty"`
+	BankTxnDate   *string  `json:"bank_txn_date,omitempty"`
+	BankTxnType   *string  `json:"bank_txn_type,omitempty"` // CREDIT / DEBIT
+
+	// Decision metadata
+	Method     *string  `json:"method,omitempty"`
+	Confidence *float64 `json:"confidence,omitempty"`
+	Reasoning  *string  `json:"reasoning,omitempty"`
+	DecidedAt  *string  `json:"decided_at,omitempty"`
 }
 
-// ReconciliationRecordsResponse is the JSON envelope for paginated results.
-type ReconciliationRecordsResponse struct {
-	MerchantID  string                 `json:"merchant_id"`
-	Page        int                    `json:"page"`
-	PageSize    int                    `json:"page_size"`
-	TotalCount  int                    `json:"total_count"`
-	TotalPages  int                    `json:"total_pages"`
-	Records     []ReconciliationRecord `json:"records"`
+// AuditRecordsResponse is the JSON envelope for paginated results.
+type AuditRecordsResponse struct {
+	MerchantID string        `json:"merchant_id"`
+	Page       int           `json:"page"`
+	PageSize   int           `json:"page_size"`
+	TotalCount int           `json:"total_count"`
+	TotalPages int           `json:"total_pages"`
+	Records    []AuditRecord `json:"records"`
 }
 
-// GetReconciliationRecords returns the full set of reconciliation records
-// for a merchant with pagination and optional CSV export.
+// Aliases so existing tests that reference the old names keep compiling.
+type ReconciliationRecord = AuditRecord
+type ReconciliationRecordsResponse = AuditRecordsResponse
+
+// GetReconciliationRecords returns a three-category, fully paginated audit ledger.
+// Every vendor_transactions row for the merchant appears in exactly one category.
+// Every bank_transactions row for the merchant appears in exactly one category.
+//
+// record_category values:
+//
+//	"matched_pair"     — one row per reconciled_matches entry, both sides fully populated.
+//	"unmatched_vendor" — vendor txn with no entry in reconciled_matches.
+//	"unmatched_bank"   — bank txn not referenced as bank_transaction_id in reconciled_matches.
+//
+// Guarantee: UV + M = V (every vendor row once), UB + distinct_matched_bank = B (every bank row once).
+// Note: one bank txn can appear in >1 matched_pair row if it is a lumped settlement matched to
+// multiple vendor txns. M counts match rows (not distinct bank txns).
 func GetReconciliationRecords(db *pgxpool.Pool) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		merchantID := c.Params("merchantId")
@@ -270,48 +294,55 @@ func GetReconciliationRecords(db *pgxpool.Pool) fiber.Handler {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "merchantId parameter is required"})
 		}
 
-		// Parse query parameters
-		statusFilter := c.Query("status") // MATCHED, UNMATCHED, or empty for all
-		methodFilter := c.Query("method") // deterministic, agent, unresolved, duplicate, or empty for all
-
 		page, err := strconv.Atoi(c.Query("page", "1"))
 		if err != nil || page < 1 {
 			page = 1
 		}
-
 		pageSize, err := strconv.Atoi(c.Query("page_size", "25"))
 		if err != nil || pageSize < 1 {
 			pageSize = 25
 		}
-		if pageSize > 100 {
-			pageSize = 100
+		if pageSize > 200 {
+			pageSize = 200
 		}
-
-		format := c.Query("format") // "csv" for CSV export
+		format := c.Query("format")
+		categoryFilter := c.Query("category") // filter by record_category value
 
 		ctx := context.Background()
 
-		// Build base query with UNION of vendor-side and unmatched bank-side transactions
+		// UNION ALL of three categories. Each SELECT produces an identical column set;
+		// fields that don't apply to a category are projected as NULL.
 		baseQuery := `
 			FROM (
-				SELECT 
-					vt.vendor_txn_id AS transaction_id,
-					vt.amount,
-					vt.settlement_id,
-					COALESCE(vt.utr_number, '') AS utr_number,
-					vt.settlement_date,
-					vt.recon_status::text AS recon_status,
-					rl.method::text AS method,
-					rl.confidence,
-					rl.reasoning,
-					rl.created_at AS decided_at,
-					vi.vendor_name,
-					NULL::text AS bank_txn_type,
-					'vendor'::text AS record_type
-				FROM vendor_transactions vt
-				JOIN vendor_integrations vi ON vt.vendor_integration_id = vi.id
+				-- ── Category 1: MATCHED PAIRS ────────────────────────────────────────
+				-- Start FROM reconciled_matches so every row is anchored to a confirmed
+				-- match. Join vendor_transactions AND bank_transactions so both sides are
+				-- fully present. One reconciled_matches row = one result row.
+				SELECT
+					'matched_pair'::text                        AS record_category,
+					vt.vendor_txn_id                            AS vendor_txn_id,
+					vt.amount                                   AS vendor_amount,
+					vt.settlement_id                            AS vendor_settlement_id,
+					COALESCE(vt.utr_number, '')                 AS vendor_utr,
+					vt.settlement_date::text                    AS vendor_settlement_date,
+					vi.vendor_name                              AS vendor_source,
+					vt.recon_status::text                       AS vendor_recon_status,
+					bt.id::text                                 AS bank_txn_id,
+					bt.amount                                   AS bank_amount,
+					COALESCE(bt.utr_number, '')                 AS bank_utr,
+					COALESCE(bt.narration, '')                  AS bank_narration,
+					bt.txn_date::text                           AS bank_txn_date,
+					bt.txn_type::text                           AS bank_txn_type,
+					rl.method::text                             AS method,
+					rl.confidence                               AS confidence,
+					rl.reasoning                                AS reasoning,
+					rl.created_at                               AS decided_at
+				FROM reconciled_matches rm
+				JOIN vendor_transactions vt ON vt.id = rm.vendor_transaction_id
+				JOIN vendor_integrations vi ON vi.id = vt.vendor_integration_id
+				JOIN bank_transactions   bt ON bt.id = rm.bank_transaction_id
 				LEFT JOIN LATERAL (
-					SELECT r.method, r.confidence, r.reasoning, r.created_at, r.bank_transaction_id
+					SELECT r.method, r.confidence, r.reasoning, r.created_at
 					FROM reconciliation_log r
 					WHERE r.vendor_transaction_id = vt.id
 					ORDER BY r.created_at DESC
@@ -321,25 +352,69 @@ func GetReconciliationRecords(db *pgxpool.Pool) fiber.Handler {
 
 				UNION ALL
 
-				SELECT 
-					COALESCE(NULLIF(bt.utr_number, ''), bt.id::text) AS transaction_id,
-					bt.amount,
-					NULL::text AS settlement_id,
-					COALESCE(bt.utr_number, '') AS utr_number,
-					bt.txn_date::date AS settlement_date,
-					CASE WHEN bt.duplicate_of IS NOT NULL THEN 'DUPLICATE_SUPPRESSED' ELSE 'UNMATCHED' END AS recon_status,
-					CASE WHEN bt.duplicate_of IS NOT NULL THEN 'duplicate' ELSE NULL END AS method,
-					NULL::numeric AS confidence,
-					COALESCE(bt.narration, 'Unmatched bank statement credit') AS reasoning,
-					bt.created_at AS decided_at,
-					'Bank Statement' AS vendor_name,
-					bt.txn_type::text AS bank_txn_type,
-					'bank'::text AS record_type
+				-- ── Category 2: UNMATCHED VENDOR ─────────────────────────────────────
+				-- vendor_transactions with no row in reconciled_matches for that vendor txn.
+				SELECT
+					'unmatched_vendor'::text                    AS record_category,
+					vt.vendor_txn_id                            AS vendor_txn_id,
+					vt.amount                                   AS vendor_amount,
+					vt.settlement_id                            AS vendor_settlement_id,
+					COALESCE(vt.utr_number, '')                 AS vendor_utr,
+					vt.settlement_date::text                    AS vendor_settlement_date,
+					vi.vendor_name                              AS vendor_source,
+					vt.recon_status::text                       AS vendor_recon_status,
+					NULL::text                                  AS bank_txn_id,
+					NULL::numeric                               AS bank_amount,
+					NULL::text                                  AS bank_utr,
+					NULL::text                                  AS bank_narration,
+					NULL::text                                  AS bank_txn_date,
+					NULL::text                                  AS bank_txn_type,
+					rl.method::text                             AS method,
+					rl.confidence                               AS confidence,
+					rl.reasoning                                AS reasoning,
+					rl.created_at                               AS decided_at
+				FROM vendor_transactions vt
+				JOIN vendor_integrations vi ON vi.id = vt.vendor_integration_id
+				LEFT JOIN LATERAL (
+					SELECT r.method, r.confidence, r.reasoning, r.created_at
+					FROM reconciliation_log r
+					WHERE r.vendor_transaction_id = vt.id
+					ORDER BY r.created_at DESC
+					LIMIT 1
+				) rl ON true
+				WHERE vi.merchant_id = $1
+				  AND NOT EXISTS (
+					SELECT 1 FROM reconciled_matches rm WHERE rm.vendor_transaction_id = vt.id
+				  )
+
+				UNION ALL
+
+				-- ── Category 3: UNMATCHED BANK ───────────────────────────────────────
+				-- bank_transactions not referenced as bank_transaction_id in reconciled_matches.
+				SELECT
+					'unmatched_bank'::text                      AS record_category,
+					NULL::text                                  AS vendor_txn_id,
+					NULL::numeric                               AS vendor_amount,
+					NULL::text                                  AS vendor_settlement_id,
+					NULL::text                                  AS vendor_utr,
+					NULL::text                                  AS vendor_settlement_date,
+					NULL::text                                  AS vendor_source,
+					NULL::text                                  AS vendor_recon_status,
+					bt.id::text                                 AS bank_txn_id,
+					bt.amount                                   AS bank_amount,
+					COALESCE(bt.utr_number, '')                 AS bank_utr,
+					COALESCE(bt.narration, '')                  AS bank_narration,
+					bt.txn_date::text                           AS bank_txn_date,
+					bt.txn_type::text                           AS bank_txn_type,
+					NULL::text                                  AS method,
+					NULL::numeric                               AS confidence,
+					COALESCE(bt.narration, 'Unmatched bank transaction') AS reasoning,
+					bt.created_at                               AS decided_at
 				FROM bank_transactions bt
-				JOIN merchant_bank_accounts mba ON bt.bank_account_id = mba.id
+				JOIN merchant_bank_accounts mba ON mba.id = bt.bank_account_id
 				WHERE mba.merchant_id = $1
 				  AND NOT EXISTS (
-					  SELECT 1 FROM reconciled_matches rm WHERE rm.bank_transaction_id = bt.id
+					SELECT 1 FROM reconciled_matches rm WHERE rm.bank_transaction_id = bt.id
 				  )
 			) rec
 			WHERE 1=1
@@ -347,22 +422,15 @@ func GetReconciliationRecords(db *pgxpool.Pool) fiber.Handler {
 		args := []any{merchantID}
 		argIdx := 2
 
-		if statusFilter != "" {
-			baseQuery += fmt.Sprintf(" AND rec.recon_status = $%d", argIdx)
-			args = append(args, statusFilter)
-			argIdx++
-		}
-		if methodFilter != "" {
-			baseQuery += fmt.Sprintf(" AND rec.method = $%d", argIdx)
-			args = append(args, methodFilter)
+		if categoryFilter != "" {
+			baseQuery += fmt.Sprintf(" AND rec.record_category = $%d", argIdx)
+			args = append(args, categoryFilter)
 			argIdx++
 		}
 
-		// Count total records (for pagination metadata)
-		countQuery := "SELECT COUNT(*) " + baseQuery
+		// Count total for pagination
 		var totalCount int
-		err = db.QueryRow(ctx, countQuery, args...).Scan(&totalCount)
-		if err != nil {
+		if err = db.QueryRow(ctx, "SELECT COUNT(*) "+baseQuery, args...).Scan(&totalCount); err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to count records", "details": err.Error()})
 		}
 
@@ -371,19 +439,20 @@ func GetReconciliationRecords(db *pgxpool.Pool) fiber.Handler {
 			totalPages = 1
 		}
 
-		// If CSV export, ignore pagination and stream all matching records
 		if format == "csv" {
 			return streamCSVExport(c, db, ctx, baseQuery, args, merchantID)
 		}
 
-		// Paginated query
 		selectQuery := `
-			SELECT rec.transaction_id, rec.amount, rec.settlement_id, rec.utr_number,
-			       rec.settlement_date, rec.recon_status,
-			       rec.method, rec.confidence, rec.reasoning, rec.decided_at,
-			       rec.vendor_name, rec.bank_txn_type, rec.record_type
+			SELECT
+				rec.record_category,
+				rec.vendor_txn_id, rec.vendor_amount, rec.vendor_settlement_id, rec.vendor_utr,
+				rec.vendor_settlement_date, rec.vendor_source, rec.vendor_recon_status,
+				rec.bank_txn_id, rec.bank_amount, rec.bank_utr, rec.bank_narration,
+				rec.bank_txn_date, rec.bank_txn_type,
+				rec.method, rec.confidence, rec.reasoning, rec.decided_at
 		` + baseQuery + `
-			ORDER BY rec.settlement_date DESC, rec.transaction_id DESC
+			ORDER BY rec.decided_at DESC NULLS LAST, rec.vendor_txn_id DESC NULLS LAST
 			LIMIT $` + strconv.Itoa(argIdx) + ` OFFSET $` + strconv.Itoa(argIdx+1)
 
 		limitArgs := append(args, pageSize, (page-1)*pageSize)
@@ -393,59 +462,52 @@ func GetReconciliationRecords(db *pgxpool.Pool) fiber.Handler {
 		}
 		defer rows.Close()
 
-		var records []ReconciliationRecord
+		var records []AuditRecord
 		for rows.Next() {
-			var rec ReconciliationRecord
-			var settlementDate time.Time
+			var rec AuditRecord
 			var decidedAt *time.Time
-			if err := rows.Scan(
-				&rec.VendorTxnID,
-				&rec.Amount,
-				&rec.SettlementID,
-				&rec.UTRNumber,
-				&settlementDate,
-				&rec.ReconStatus,
-				&rec.Method,
-				&rec.Confidence,
-				&rec.Reasoning,
-				&decidedAt,
-				&rec.VendorName,
-				&rec.BankTxnType,
-				&rec.RecordType,
-			); err == nil {
-				rec.SettlementDate = settlementDate.Format("2006-01-02")
-				if decidedAt != nil {
-					s := decidedAt.Format(time.RFC3339)
-					rec.DecidedAt = &s
-				}
-				rec.Side = rec.RecordType
-				records = append(records, rec)
+			if scanErr := rows.Scan(
+				&rec.RecordCategory,
+				&rec.VendorTxnID, &rec.VendorAmount, &rec.VendorSettlementID, &rec.VendorUTR,
+				&rec.VendorSettlementDate, &rec.VendorSource, &rec.VendorReconStatus,
+				&rec.BankTxnID, &rec.BankAmount, &rec.BankUTR, &rec.BankNarration,
+				&rec.BankTxnDate, &rec.BankTxnType,
+				&rec.Method, &rec.Confidence, &rec.Reasoning, &decidedAt,
+			); scanErr != nil {
+				continue
 			}
+			if decidedAt != nil {
+				s := decidedAt.Format(time.RFC3339)
+				rec.DecidedAt = &s
+			}
+			records = append(records, rec)
 		}
 		if records == nil {
-			records = []ReconciliationRecord{}
+			records = []AuditRecord{}
 		}
 
-		return c.Status(fiber.StatusOK).JSON(ReconciliationRecordsResponse{
-			MerchantID:  merchantID,
-			Page:        page,
-			PageSize:    pageSize,
-			TotalCount:  totalCount,
-			TotalPages:  totalPages,
-			Records:     records,
+		return c.Status(fiber.StatusOK).JSON(AuditRecordsResponse{
+			MerchantID: merchantID,
+			Page:       page,
+			PageSize:   pageSize,
+			TotalCount: totalCount,
+			TotalPages: totalPages,
+			Records:    records,
 		})
 	}
 }
 
 func streamCSVExport(c *fiber.Ctx, db *pgxpool.Pool, ctx context.Context, baseQuery string, args []any, merchantID string) error {
-	// Query ALL matching records (no pagination)
 	selectQuery := `
-		SELECT rec.transaction_id, rec.amount, rec.settlement_id, rec.utr_number,
-		       rec.settlement_date, rec.recon_status,
-		       rec.method, rec.confidence, rec.reasoning, rec.decided_at,
-		       rec.vendor_name, rec.bank_txn_type, rec.record_type
+		SELECT
+			rec.record_category,
+			rec.vendor_txn_id, rec.vendor_amount, rec.vendor_settlement_id, rec.vendor_utr,
+			rec.vendor_settlement_date, rec.vendor_source, rec.vendor_recon_status,
+			rec.bank_txn_id, rec.bank_amount, rec.bank_utr, rec.bank_narration,
+			rec.bank_txn_date, rec.bank_txn_type,
+			rec.method, rec.confidence, rec.reasoning, rec.decided_at
 	` + baseQuery + `
-		ORDER BY rec.settlement_date DESC, rec.transaction_id DESC
+		ORDER BY rec.decided_at DESC NULLS LAST, rec.vendor_txn_id DESC NULLS LAST
 	`
 
 	rows, err := db.Query(ctx, selectQuery, args...)
@@ -454,43 +516,59 @@ func streamCSVExport(c *fiber.Ctx, db *pgxpool.Pool, ctx context.Context, baseQu
 	}
 	defer rows.Close()
 
-	// Set CSV headers
 	today := time.Now().Format("2006-01-02")
-	filename := fmt.Sprintf("reconciliation_records_%s_%s.csv", merchantID, today)
+	filename := fmt.Sprintf("reconciliation_audit_%s_%s.csv", merchantID, today)
 	c.Set("Content-Type", "text/csv")
 	c.Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 
-	// Use encoding/csv Writer for proper escaping
 	writer := csv.NewWriter(c.Response().BodyWriter())
-
-	// Write header
-	header := []string{"record_type", "transaction_id", "amount", "settlement_id", "utr_number", "settlement_date", "recon_status", "vendor_name", "bank_txn_type", "method", "confidence", "reasoning", "decided_at"}
+	header := []string{
+		"record_category",
+		"vendor_txn_id", "vendor_amount", "vendor_settlement_id", "vendor_utr",
+		"vendor_settlement_date", "vendor_source", "vendor_recon_status",
+		"bank_txn_id", "bank_amount", "bank_utr", "bank_narration",
+		"bank_txn_date", "bank_txn_type",
+		"method", "confidence", "reasoning", "decided_at",
+	}
 	if err := writer.Write(header); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to write CSV header", "details": err.Error()})
 	}
 
-	// Stream rows
 	for rows.Next() {
-		var txnID, utrNumber, reconStatus, recordType string
-		var amount float64
-		var settlementID, method, reasoning, vendorName, bankTxnType *string
+		var category string
+		var vendorTxnID, vendorSettlementID, vendorUTR, vendorSettlementDate, vendorSource, vendorReconStatus *string
+		var vendorAmount *float64
+		var bankTxnID, bankUTR, bankNarration, bankTxnDate, bankTxnType *string
+		var bankAmount *float64
+		var method, reasoning *string
 		var confidence *float64
-		var settlementDate time.Time
 		var decidedAt *time.Time
 
-		if err := rows.Scan(&txnID, &amount, &settlementID, &utrNumber, &settlementDate, &reconStatus, &method, &confidence, &reasoning, &decidedAt, &vendorName, &bankTxnType, &recordType); err != nil {
+		if err := rows.Scan(
+			&category,
+			&vendorTxnID, &vendorAmount, &vendorSettlementID, &vendorUTR,
+			&vendorSettlementDate, &vendorSource, &vendorReconStatus,
+			&bankTxnID, &bankAmount, &bankUTR, &bankNarration,
+			&bankTxnDate, &bankTxnType,
+			&method, &confidence, &reasoning, &decidedAt,
+		); err != nil {
 			continue
 		}
 
 		row := []string{
-			recordType,
-			txnID,
-			strconv.FormatFloat(amount, 'f', 2, 64),
-			derefString(settlementID, ""),
-			utrNumber,
-			settlementDate.Format("2006-01-02"),
-			reconStatus,
-			derefString(vendorName, ""),
+			category,
+			derefString(vendorTxnID, ""),
+			derefFloat64(vendorAmount, ""),
+			derefString(vendorSettlementID, ""),
+			derefString(vendorUTR, ""),
+			derefString(vendorSettlementDate, ""),
+			derefString(vendorSource, ""),
+			derefString(vendorReconStatus, ""),
+			derefString(bankTxnID, ""),
+			derefFloat64(bankAmount, ""),
+			derefString(bankUTR, ""),
+			derefString(bankNarration, ""),
+			derefString(bankTxnDate, ""),
 			derefString(bankTxnType, ""),
 			derefString(method, ""),
 			derefFloat64(confidence, ""),
@@ -506,7 +584,6 @@ func streamCSVExport(c *fiber.Ctx, db *pgxpool.Pool, ctx context.Context, baseQu
 	if err := writer.Error(); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "CSV writer error", "details": err.Error()})
 	}
-
 	return nil
 }
 
@@ -541,7 +618,6 @@ type SourceStatus struct {
 }
 
 // GetSourceStatus returns live counts and status for all four sources in one request.
-// It powers the Data Sources strip so the frontend needs a single call instead of four.
 func GetSourceStatus(db *pgxpool.Pool) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		merchantID := c.Params("merchantId")
@@ -551,7 +627,6 @@ func GetSourceStatus(db *pgxpool.Pool) fiber.Handler {
 
 		ctx := context.Background()
 
-		// Helper to count vendor_transactions for a given vendor_name via vendor_integrations.
 		countVendor := func(vendorName string) int {
 			var n int
 			err := db.QueryRow(ctx, `
@@ -581,7 +656,6 @@ func GetSourceStatus(db *pgxpool.Pool) fiber.Handler {
 			bankCount = 0
 		}
 
-		// is_live distinguishes Razorpay (real integration) from the three mocks.
 		sources := []SourceStatus{
 			{
 				Name:        "Razorpay",
