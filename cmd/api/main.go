@@ -159,6 +159,76 @@ func main() {
 			"provider_id": providerID,
 		})
 	})
+	demoGroup.Post("/sources/bank/simulate", func(c *fiber.Ctx) error {
+		type SimulateRequest struct {
+			MerchantID string `json:"merchant_id"`
+			Count      int    `json:"count"`
+		}
+		var req SimulateRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
+		}
+		if req.MerchantID == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "merchant_id is required"})
+		}
+		if req.Count <= 0 {
+			req.Count = 10
+		}
+		if err := demo.GenerateMockBankStatementData(context.Background(), db.Pool, req.MerchantID, req.Count); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to simulate bank statement", "details": err.Error()})
+		}
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": fmt.Sprintf("Simulated %d bank statement records via mock Setu AA flow", req.Count),
+			"count":   req.Count,
+		})
+	})
+	demoGroup.Post("/sources/phonepe/simulate", func(c *fiber.Ctx) error {
+		type SimulateRequest struct {
+			MerchantID string `json:"merchant_id"`
+			Count      int    `json:"count"`
+		}
+		var req SimulateRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
+		}
+		if req.MerchantID == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "merchant_id is required"})
+		}
+		if req.Count <= 0 {
+			req.Count = 10
+		}
+		if err := demo.GenerateMockPhonePeData(context.Background(), db.Pool, req.MerchantID, req.Count); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to simulate PhonePe data", "details": err.Error()})
+		}
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": fmt.Sprintf("Simulated %d PhonePe records", req.Count),
+			"count":   req.Count,
+		})
+	})
+	demoGroup.Post("/sources/pinelabs/simulate", func(c *fiber.Ctx) error {
+		type SimulateRequest struct {
+			MerchantID string `json:"merchant_id"`
+			Count      int    `json:"count"`
+		}
+		var req SimulateRequest
+		if err := c.BodyParser(&req); err != nil {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "cannot parse json"})
+		}
+		if req.MerchantID == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "merchant_id is required"})
+		}
+		if req.Count <= 0 {
+			req.Count = 10
+		}
+		if err := demo.GenerateMockPineLabsData(context.Background(), db.Pool, req.MerchantID, req.Count); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to simulate Pine Labs data", "details": err.Error()})
+		}
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"message": fmt.Sprintf("Simulated %d Pine Labs records", req.Count),
+			"count":   req.Count,
+		})
+	})
+	demoGroup.Get("/sources/:merchantId", demo.GetSourceStatus(db.Pool))
 	demoGroup.Get("/dashboard/:merchantId", demo.GetReconciliationDashboard(db.Pool))
 	demoGroup.Get("/records/:merchantId", demo.GetReconciliationRecords(db.Pool))
 

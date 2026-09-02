@@ -1120,6 +1120,463 @@
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* Pipeline Trace panel — same card treatment as dashboard */
+        .pipeline-trace {
+            max-width: 1200px;
+            margin: 16px auto 0;
+            padding: 0 24px;
+        }
+
+        .pipeline-trace .card {
+            overflow: hidden;
+        }
+
+        .trace-body {
+            display: flex;
+            flex-direction: column;
+            background: #FCFDFE;
+        }
+
+        .trace-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            background: var(--surface);
+            font-size: 13px;
+        }
+
+        .trace-row:last-child {
+            border-bottom: none;
+        }
+
+        .trace-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-size: 12px;
+            font-weight: 700;
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+
+        .trace-row.done .trace-num {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .trace-row.pending .trace-num {
+            background: var(--surface-muted);
+            border-color: var(--border);
+            color: var(--muted);
+        }
+
+        .trace-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .trace-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1.2;
+        }
+
+        .trace-desc {
+            font-size: 11px;
+            color: var(--muted);
+            line-height: 1.3;
+            margin-top: 1px;
+        }
+
+        .trace-state {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--muted);
+            white-space: nowrap;
+            font-family: var(--font-mono);
+            flex-shrink: 0;
+            max-width: 50%;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+
+        .trace-state.done {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .trace-state.muted {
+            color: var(--muted);
+        }
+
+        .trace-reason {
+            font-size: 11px;
+            color: var(--muted);
+            font-family: var(--font-body);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 260px;
+            margin-top: 2px;
+        }
+
+        .trace-summary {
+            padding: 12px 16px;
+            background: var(--surface-muted);
+            border-top: 1px solid var(--border);
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-align: center;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .trace-summary strong {
+            color: var(--text);
+            font-weight: 700;
+        }
+
+        /* Clickable stat cards — drill-down affordance */
+        .metric-card.clickable,
+        .perf-item.clickable {
+            cursor: pointer;
+            transition: border-color 150ms, background 150ms, transform 150ms, box-shadow 150ms;
+        }
+
+        .metric-card.clickable:hover {
+            border-color: var(--border-strong);
+            background: #F1F5F9;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(15,23,42,0.06);
+        }
+
+        .perf-item.clickable:hover {
+            border-color: var(--border-strong);
+            background: #F8FAFC;
+        }
+
+        .metric-card.clickable:focus-visible,
+        .perf-item.clickable:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
+
+        /* Throughput tooltip */
+        .perf-item.has-tooltip {
+            position: relative;
+        }
+
+        .perf-tooltip {
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--text);
+            color: white;
+            padding: 6px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            line-height: 1.3;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 150ms, visibility 150ms;
+            pointer-events: none;
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(15,23,42,0.18);
+        }
+
+        .perf-tooltip::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: var(--text);
+        }
+
+        .perf-item.has-tooltip:hover .perf-tooltip,
+        .perf-item.has-tooltip:focus-within .perf-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Decision receipt — inline expandable panel */
+        .receipt {
+            padding: 12px;
+            background: var(--surface-muted);
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .receipt-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+
+        .receipt-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--muted);
+            min-width: 90px;
+            padding-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .receipt-value {
+            flex: 1;
+            color: var(--text-secondary);
+            word-break: break-word;
+        }
+
+        .receipt-value.mono {
+            font-family: var(--font-mono);
+            font-size: 12px;
+        }
+
+        .receipt-evidence {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-top: 2px;
+        }
+
+        .evidence-chip {
+            font-size: 11px;
+            font-family: var(--font-mono);
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 3px 8px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .evidence-chip strong {
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .receipt-meta {
+            font-size: 11px;
+            color: var(--faint);
+            border-top: 1px solid var(--border);
+            padding-top: 6px;
+            margin-top: 2px;
+        }
+
+        .receipt-tr td {
+            padding: 0 !important;
+            background: var(--surface-muted);
+        }
+
+        /* Chevron for expandable rows */
+        .chevron {
+            width: 16px;
+            height: 16px;
+            display: grid;
+            place-items: center;
+            color: var(--faint);
+            transition: transform 150ms, color 150ms;
+            flex-shrink: 0;
+        }
+
+        tr.expanded .chevron,
+        .audit-row.expanded .chevron {
+            transform: rotate(90deg);
+            color: var(--text-secondary);
+        }
+
+        .expandable-row {
+            cursor: pointer;
+        }
+
+        .expandable-row:hover {
+            background: #F8FAFC !important;
+        }
+
+        /* Data Sources strip */
+        .data-sources {
+            max-width: 1200px;
+            margin: 16px auto 0;
+            padding: 0 24px;
+        }
+
+        .data-sources-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .source-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+        }
+
+        .source-card.live {
+            border-color: var(--success-border);
+        }
+
+        .source-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .source-monogram {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: var(--surface-muted);
+            border: 1px solid var(--border);
+            display: grid;
+            place-items: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--muted);
+            flex-shrink: 0;
+        }
+
+        .source-card.live .source-monogram {
+            background: var(--success-bg);
+            border-color: var(--success-border);
+            color: var(--success);
+        }
+
+        .source-meta {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .source-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            line-height: 1.2;
+        }
+
+        .source-label {
+            font-size: 11px;
+            color: var(--muted);
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .source-status {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            padding: 3px 8px;
+            border-radius: 999px;
+            border: 1px solid;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            flex-shrink: 0;
+        }
+
+        .source-status.live {
+            background: var(--success-bg);
+            border-color: var(--success-border);
+            color: var(--success);
+        }
+
+        .source-status.muted {
+            background: var(--surface-muted);
+            border-color: var(--border);
+            color: var(--muted);
+        }
+
+        .source-status .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            display: inline-block;
+        }
+
+        .source-foot {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            border-top: 1px solid var(--border);
+            padding-top: 10px;
+            margin-top: 2px;
+        }
+
+        .source-count {
+            font-family: var(--font-mono);
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1;
+        }
+
+        .source-count.muted {
+            color: var(--faint);
+            font-weight: 600;
+        }
+
+        .source-count-label {
+            font-size: 11px;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        .source-connect {
+            margin-left: auto;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--primary);
+            cursor: pointer;
+            padding: 4px 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .source-connect:hover {
+            background: var(--surface-muted);
+            border-color: var(--border-strong);
+        }
+
+        .data-sources-note {
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.5;
+            padding: 0 2px;
+        }
+
         /* Responsive */
         @media (max-width: 960px) {
             header {
@@ -1129,6 +1586,8 @@
             .header-center { order: 3; width: 100%; justify-content: flex-start; }
             .metrics-grid { grid-template-columns: 1fr; }
             .perf-grid { grid-template-columns: 1fr; }
+            .data-sources-grid { grid-template-columns: 1fr; }
+            .data-sources { padding: 0 16px; }
             main { padding: 16px; gap: 16px; }
             .runbook { padding: 0 16px; margin-top: 16px; }
             .runbook-card { flex-direction: column; align-items: flex-start; }
@@ -1175,6 +1634,20 @@
         </div>
     </header>
 
+    <!-- Pipeline Trace — hidden by default, appears on Run Engine / Run Agent -->
+    <div id="pipeline-trace" class="pipeline-trace" style="display:none;">
+        <div class="card">
+            <div class="card-header">
+                <h2 id="trace-title">Pipeline Trace</h2>
+                <span class="badge live" id="trace-badge">RUNNING</span>
+            </div>
+            <div id="trace-body" class="trace-body">
+                <!-- rows injected by JS -->
+            </div>
+            <div id="trace-summary" class="trace-summary" style="display:none;"></div>
+        </div>
+    </div>
+
     <div class="runbook">
         <div class="runbook-card">
             <ol class="stepper" id="stepper">
@@ -1189,10 +1662,78 @@
         </div>
     </div>
 
+    <!-- Data Sources — multi-source-ready architecture -->
+    <div class="data-sources">
+        <div class="data-sources-grid">
+            <div class="source-card live" id="source-razorpay">
+                <div class="source-head">
+                    <div class="source-monogram">R</div>
+                    <div class="source-meta">
+                        <div class="source-name">Razorpay</div>
+                        <div class="source-label">Gateway Settlements</div>
+                    </div>
+                    <span class="source-status live"><span class="status-dot"></span>Connected · Live</span>
+                </div>
+                <div class="source-foot">
+                    <span class="source-count" id="src-count-razorpay">—</span>
+                    <span class="source-count-label">records</span>
+                </div>
+            </div>
+            <div class="source-card" id="source-phonepe" role="button" tabindex="0" onclick="showToast('PhonePe integration — coming soon')" onkeydown="if(event.key==='Enter') showToast('PhonePe integration — coming soon')">
+                <div class="source-head">
+                    <div class="source-monogram">P</div>
+                    <div class="source-meta">
+                        <div class="source-name">PhonePe</div>
+                        <div class="source-label">Gateway Settlements</div>
+                    </div>
+                    <span class="source-status muted">Not connected</span>
+                </div>
+                <div class="source-foot">
+                    <span class="source-count muted">—</span>
+                    <span class="source-count-label">records</span>
+                    <span class="source-connect">+ Connect</span>
+                </div>
+            </div>
+            <div class="source-card" id="source-pinelabs" role="button" tabindex="0" onclick="showToast('Pine Labs integration — coming soon')" onkeydown="if(event.key==='Enter') showToast('Pine Labs integration — coming soon')">
+                <div class="source-head">
+                    <div class="source-monogram">Pi</div>
+                    <div class="source-meta">
+                        <div class="source-name">Pine Labs</div>
+                        <div class="source-label">Gateway Settlements</div>
+                    </div>
+                    <span class="source-status muted">Not connected</span>
+                </div>
+                <div class="source-foot">
+                    <span class="source-count muted">—</span>
+                    <span class="source-count-label">records</span>
+                    <span class="source-connect">+ Connect</span>
+                </div>
+            </div>
+            <div class="source-card" id="source-bank" role="button" tabindex="0" onclick="showToast('Bank Statement integration — coming soon')" onkeydown="if(event.key==='Enter') showToast('Bank Statement integration — coming soon')">
+                <div class="source-head">
+                    <div class="source-monogram">B</div>
+                    <div class="source-meta">
+                        <div class="source-name">Bank Statement</div>
+                        <div class="source-label">Account Aggregator — Setu</div>
+                    </div>
+                    <span class="source-status muted">Not connected</span>
+                </div>
+                <div class="source-foot">
+                    <span class="source-count muted">—</span>
+                    <span class="source-count-label">records</span>
+                    <span class="source-connect">+ Connect</span>
+                </div>
+            </div>
+        </div>
+        <div class="data-sources-note">
+            This reconciliation engine is designed to ingest settlements from multiple gateways and bank statements via Account Aggregator into a single unified ledger — Razorpay is live today; PhonePe, Pine Labs, and direct bank statement ingestion follow the same <code>PaymentProvider</code> interface already used for Razorpay.
+        </div>
+    </div>
+
     <main>
-        <!-- KPI row -->
+        <!-- KPI row — drill-down: click any number to jump to its records -->
         <div class="metrics-grid">
-            <div class="metric-card">
+            <div class="metric-card clickable" role="button" tabindex="0" onclick="drillToRecords('')" onkeydown="if(event.key==='Enter') drillToRecords('')" title="View all records in Full Records">
                 <div class="metric-head">
                     <div class="metric-title">Expected — Vendor Ledger</div>
                     <div class="metric-icon">
@@ -1206,7 +1747,7 @@
                 <div class="metric-foot" id="foot-expected">Total gross from vendor settlements • seed with <code>go run ./cmd/seedgen</code></div>
             </div>
 
-            <div class="metric-card success">
+            <div class="metric-card success clickable" role="button" tabindex="0" onclick="drillToRecords('MATCHED')" onkeydown="if(event.key==='Enter') drillToRecords('MATCHED')" title="View matched records">
                 <div class="metric-head">
                     <div class="metric-title">Verified — Bank Settled</div>
                     <div class="metric-icon">
@@ -1220,7 +1761,7 @@
                 <div class="metric-foot" id="foot-settled">Matched by settlement_id / UTR + amount • audited in reconciliation_log</div>
             </div>
 
-            <div class="metric-card warning">
+            <div class="metric-card warning clickable" role="button" tabindex="0" onclick="drillToExceptions()" onkeydown="if(event.key==='Enter') drillToExceptions()" title="View pending exceptions">
                 <div class="metric-head">
                     <div class="metric-title">Requires Attention — Pending</div>
                     <div class="metric-icon">
@@ -1246,17 +1787,18 @@
             </div>
 
             <div class="perf-grid">
-                <div class="perf-item">
+                <div class="perf-item clickable" role="button" tabindex="0" onclick="drillToRecords('MATCHED')" onkeydown="if(event.key==='Enter') drillToRecords('MATCHED')" title="View matched records">
                     <div class="perf-label">Match Rate</div>
                     <div class="stat-number rate" id="stat-match-rate">—</div>
                     <div class="stat-note">(deterministic + agent) ÷ audited decisions</div>
                 </div>
-                <div class="perf-item">
+                <div class="perf-item clickable has-tooltip" role="button" tabindex="0" title="total_processed ÷ (elapsed_ms ÷ 1000), measured server-side during the deterministic pass">
                     <div class="perf-label">Throughput</div>
                     <div class="stat-number" id="stat-throughput">—</div>
                     <div class="stat-note" id="stat-throughput-note">Run the engine to measure</div>
+                    <div class="perf-tooltip">total_processed ÷ (elapsed_ms ÷ 1000), measured server-side during the deterministic pass</div>
                 </div>
-                <div class="perf-item">
+                <div class="perf-item clickable" role="button" tabindex="0" onclick="drillToExceptions()" onkeydown="if(event.key==='Enter') drillToExceptions()" title="View exceptions">
                     <div class="perf-label">Exceptions Remaining</div>
                     <div class="stat-number exceptions" id="stat-exceptions">—</div>
                     <div class="stat-note">Still requiring review after both passes</div>
@@ -1308,11 +1850,12 @@
                                     <th>Vendor Txn ID</th>
                                     <th>UTR</th>
                                     <th style="text-align:right;">Amount</th>
+                                    <th style="width:24px;"></th>
                                 </tr>
                             </thead>
                             <tbody id="table-body">
                                 <tr>
-                                    <td colspan="4">
+                                    <td colspan="5">
                                         <div class="empty-state">
                                             <div class="empty-icon">
                                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -1392,6 +1935,7 @@
                                             <th>Method</th>
                                             <th>Confidence</th>
                                             <th>Reasoning</th>
+                                            <th style="width:24px;"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="records-table-body"></tbody>
@@ -1516,6 +2060,292 @@
             }
         };
 
+        // Drill-down — no dead-end numbers
+        const drillToRecords = (statusFilter) => {
+            switchWorkspace('records');
+            const ws = document.getElementById('workspace');
+            if (ws) ws.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const sel = document.getElementById('filter-status');
+            if (sel) sel.value = statusFilter || '';
+            recordsState.statusFilter = statusFilter || '';
+            recordsState.currentPage = 1;
+            if (recordsState.loaded) {
+                fetchRecords();
+            } else {
+                loadRecords();
+            }
+        };
+
+        const drillToExceptions = () => {
+            switchWorkspace('exceptions');
+            const ws = document.getElementById('workspace');
+            if (ws) ws.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+
+        const drillToAuditTrail = () => {
+            switchWorkspace('decisions');
+            const ws = document.getElementById('workspace');
+            if (ws) ws.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        };
+
+        const updateSourceCounts = async () => {
+            const el = document.getElementById('src-count-razorpay');
+            if (!el || !merchantId) return;
+            try {
+                const res = await fetch(`/api/v1/demo/records/${merchantId}?page_size=1`);
+                const data = await res.json();
+                if (res.ok && typeof data.total_count === 'number') {
+                    el.textContent = String(data.total_count);
+                    el.classList.remove('muted');
+                    return;
+                }
+            } catch (e) {}
+            if (lastDashboard) {
+                const pending = (lastDashboard.pending_transactions || []).length;
+                const det = (lastDashboard.method_breakdown && lastDashboard.method_breakdown.deterministic) || 0;
+                const ag = (lastDashboard.method_breakdown && lastDashboard.method_breakdown.agent) || 0;
+                const totalApprox = pending + det + ag;
+                if (totalApprox > 0) {
+                    el.textContent = String(totalApprox);
+                    el.classList.remove('muted');
+                    return;
+                }
+            }
+            el.textContent = '0';
+            el.classList.remove('muted');
+        };
+
+        // Decision receipt helpers — inline, not modal
+        const formatDecidedAt = (iso) => {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return iso;
+            const now = new Date();
+            const diffMs = now - d;
+            const sec = Math.floor(diffMs / 1000);
+            if (sec < 60) return `${sec}s ago`;
+            const min = Math.floor(sec / 60);
+            if (min < 60) return `${min} minute${min===1?'':'s'} ago`;
+            const hr = Math.floor(min / 60);
+            if (hr < 24) return `${hr} hour${hr===1?'':'s'} ago`;
+            const days = Math.floor(hr / 24);
+            if (days < 7) return `${days} day${days===1?'':'s'} ago`;
+            return d.toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+        };
+
+        const parseEvidenceSignals = (reasoning) => {
+            if (!reasoning) return null;
+            const out = {};
+            const r1 = reasoning.match(/amount_ratio\s*[:=]\s*([\d.]+)/i);
+            if (r1) out.amount_ratio = r1[1];
+            const r2 = reasoning.match(/date_gap_days\s*[:=]\s*(-?\d+)/i);
+            if (r2) out.date_gap_days = r2[1];
+            const r3 = reasoning.match(/settlement_id_overlap\s*[:=]\s*([^\n,]+)/i);
+            if (r3) out.settlement_id_overlap = r3[1].trim();
+            if (!out.settlement_id_overlap) {
+                const alt = reasoning.match(/(\d+\s*of\s*\d+\s*characters[^,\n]*)/i);
+                if (alt) out.settlement_id_overlap = alt[1].trim();
+            }
+            return Object.keys(out).length ? out : null;
+        };
+
+        const tierNameFor = (reasoning) => {
+            const m = (reasoning || '').match(/^Tier\s*(\d)\s*:/);
+            if (!m) return null;
+            const map = { '1': 'Exact Settlement ID', '2': 'Lumped Settlement', '3': 'Truncated Prefix', '4': 'Legacy UTR+Amount' };
+            return map[m[1]] ? `Tier ${m[1]} — ${map[m[1]]}` : `Tier ${m[1]}`;
+        };
+
+        const buildReceiptHTML = (rec) => {
+            // rec: { method, confidence, reasoning, decided_at, settlement_id, recon_status, vendor_txn_id, amount }
+            if (!rec || (!rec.method && !rec.reasoning && !rec.recon_status)) {
+                return `<div class="receipt"><div class="receipt-row"><span class="receipt-label">Status</span><span class="receipt-value">Not yet evaluated — run the reconciliation engine</span></div></div>`;
+            }
+            const method = rec.method || (rec.recon_status === 'MATCHED' ? 'deterministic' : 'unresolved');
+            let html = '';
+            // Method chip
+            html += `<div class="receipt-row"><span class="receipt-label">Method</span><span class="receipt-value"><span class="chip chip-${method}">${method}</span></span></div>`;
+            // Tier / confidence specifics
+            if (method === 'deterministic') {
+                const tier = tierNameFor(rec.reasoning);
+                if (tier) html += `<div class="receipt-row"><span class="receipt-label">Tier</span><span class="receipt-value">${tier}</span></div>`;
+                if (rec.confidence != null) html += `<div class="receipt-row"><span class="receipt-label">Confidence</span><span class="receipt-value mono">${(rec.confidence*100).toFixed(0)}%</span></div>`;
+            } else if (method === 'agent') {
+                if (rec.confidence != null) html += `<div class="receipt-row"><span class="receipt-label">Confidence</span><span class="receipt-value mono">${(rec.confidence*100).toFixed(0)}%</span></div>`;
+                const sig = parseEvidenceSignals(rec.reasoning);
+                if (sig) {
+                    html += `<div class="receipt-row"><span class="receipt-label">Evidence</span><span class="receipt-value"><span class="receipt-evidence">`;
+                    if (sig.amount_ratio) html += `<span class="evidence-chip"><strong>ratio</strong> ${sig.amount_ratio}</span>`;
+                    if (sig.date_gap_days) html += `<span class="evidence-chip"><strong>gap</strong> ${sig.date_gap_days}d</span>`;
+                    if (sig.settlement_id_overlap) html += `<span class="evidence-chip"><strong>overlap</strong> ${sig.settlement_id_overlap}</span>`;
+                    html += `</span></span></div>`;
+                }
+            } else if (method === 'unresolved') {
+                if (rec.confidence != null) html += `<div class="receipt-row"><span class="receipt-label">Confidence</span><span class="receipt-value mono">${(rec.confidence*100).toFixed(0)}%</span></div>`;
+            }
+            // Reasoning (full, not truncated)
+            const reasoning = rec.reasoning ? rec.reasoning : (method === 'unresolved' ? 'No match found at any tier — see Exceptions tab' : '—');
+            html += `<div class="receipt-row"><span class="receipt-label">Reasoning</span><span class="receipt-value">${reasoning.replace(/</g,'&lt;')}</span></div>`;
+            // Decided at
+            if (rec.decided_at) {
+                html += `<div class="receipt-meta">Decided ${formatDecidedAt(rec.decided_at)} • ${new Date(rec.decided_at).toLocaleString('en-IN')}</div>`;
+            } else if (rec.settlement_id) {
+                html += `<div class="receipt-meta">Settlement ${rec.settlement_id}</div>`;
+            }
+            return `<div class="receipt">${html}</div>`;
+        };
+
+        const toggleTableReceipt = (tr, rec) => {
+            const next = tr.nextElementSibling;
+            if (next && next.classList.contains('receipt-tr')) {
+                next.remove();
+                tr.classList.remove('expanded');
+                return;
+            }
+            // close any other open receipt in same tbody
+            const tbody = tr.parentElement;
+            if (tbody) {
+                tbody.querySelectorAll('tr.receipt-tr').forEach(r => r.remove());
+                tbody.querySelectorAll('tr.expanded').forEach(r => r.classList.remove('expanded'));
+            }
+            const receiptTr = document.createElement('tr');
+            receiptTr.className = 'receipt-tr';
+            const td = document.createElement('td');
+            td.colSpan = tr.children.length || 5;
+            td.style.padding = '0';
+            td.innerHTML = buildReceiptHTML(rec);
+            receiptTr.appendChild(td);
+            tr.parentNode.insertBefore(receiptTr, tr.nextSibling);
+            tr.classList.add('expanded');
+        };
+
+        const toggleListReceipt = (rowEl, rec) => {
+            let receipt = rowEl.querySelector(':scope > .receipt');
+            if (receipt) {
+                receipt.style.display = receipt.style.display === 'none' ? 'flex' : 'none';
+                rowEl.classList.toggle('expanded', receipt.style.display !== 'none');
+                const chev = rowEl.querySelector('.chevron');
+                if (chev) chev.style.transform = rowEl.classList.contains('expanded') ? 'rotate(90deg)' : '';
+                return;
+            }
+            receipt = document.createElement('div');
+            receipt.className = 'receipt';
+            receipt.innerHTML = buildReceiptHTML(rec).replace('<div class="receipt">','').replace('</div>','');
+            // reuse buildReceiptHTML inner rows without outer wrapper duplication
+            // Instead rebuild as: create wrapper via buildReceiptHTML then extract innerHTML
+            const tmp = document.createElement('div');
+            tmp.innerHTML = buildReceiptHTML(rec);
+            receipt.innerHTML = tmp.firstElementChild.innerHTML;
+            receipt.style.display = 'flex';
+            receipt.style.flexDirection = 'column';
+            receipt.style.gap = '8px';
+            // insert after row-head but inside rowEl
+            rowEl.appendChild(receipt);
+            rowEl.classList.add('expanded');
+            const chev = rowEl.querySelector('.chevron');
+            if (chev) chev.style.transform = 'rotate(90deg)';
+        };
+
+        const fetchRecordForTxn = async (vendorTxnId) => {
+            try {
+                const res = await fetch(`/api/v1/demo/records/${merchantId}?page_size=100`);
+                const data = await res.json();
+                if (!res.ok) return null;
+                return (data.records || []).find(r => r.vendor_txn_id === vendorTxnId) || null;
+            } catch (e) { return null; }
+        };
+
+        const handlePendingExpand = async (tr, vendorTxnId) => {
+            const next = tr.nextElementSibling;
+            if (next && next.classList.contains('receipt-tr')) {
+                next.remove();
+                tr.classList.remove('expanded');
+                return;
+            }
+            let rec = null;
+            if (lastDashboard && lastDashboard.exceptions) {
+                const ex = lastDashboard.exceptions.find(e => e.vendor_txn_id === vendorTxnId);
+                if (ex) {
+                    rec = { method: 'unresolved', confidence: null, reasoning: ex.reasoning, decided_at: null, settlement_id: ex.settlement_id || null, recon_status: 'UNMATCHED', vendor_txn_id: vendorTxnId };
+                }
+            }
+            if (!rec) {
+                rec = await fetchRecordForTxn(vendorTxnId);
+            }
+            if (!rec) {
+                const pendingTxn = (lastDashboard && lastDashboard.pending_transactions || []).find(p => p.vendor_txn_id === vendorTxnId);
+                rec = { method: null, reasoning: null, decided_at: null, recon_status: 'UNMATCHED', vendor_txn_id: vendorTxnId, amount: pendingTxn ? pendingTxn.amount : 0 };
+            }
+            toggleTableReceipt(tr, rec);
+        };
+
+        const handleExceptionExpand = (rowEl, vendorTxnId) => {
+            // data already present in row, but also check full record for timestamp
+            let rec = null;
+            if (lastDashboard && lastDashboard.exceptions) {
+                const ex = lastDashboard.exceptions.find(e => e.vendor_txn_id === vendorTxnId);
+                if (ex) rec = { method: 'unresolved', confidence: null, reasoning: ex.reasoning, decided_at: null, settlement_id: ex.settlement_id || null, recon_status: 'UNMATCHED', vendor_txn_id: vendorTxnId, amount: ex.amount };
+            }
+            if (!rec) rec = { method: 'unresolved', reasoning: rowEl.querySelector('.reasoning') ? rowEl.querySelector('.reasoning').textContent : null, recon_status: 'UNMATCHED', vendor_txn_id: vendorTxnId };
+            // try to enrich with decided_at via fetch without blocking expansion
+            toggleListReceipt(rowEl, rec);
+            // optionally fetch full record to update decided_at if available
+            fetchRecordForTxn(vendorTxnId).then(full => {
+                if (full && full.decided_at && !rec.decided_at) {
+                    rec.decided_at = full.decided_at;
+                    rec.method = full.method || rec.method;
+                    // re-render receipt if still expanded
+                    const existing = rowEl.querySelector(':scope > .receipt');
+                    if (existing && rowEl.classList.contains('expanded')) {
+                        existing.remove();
+                        toggleListReceipt(rowEl, rec);
+                        // ensure it stays expanded (toggle would hide, so force)
+                        const after = rowEl.querySelector(':scope > .receipt');
+                        if (after) after.style.display = 'flex';
+                        rowEl.classList.add('expanded');
+                    }
+                }
+            });
+        };
+
+        const handleDecisionExpand = (rowEl, vendorTxnId) => {
+            let rec = null;
+            if (lastDashboard && lastDashboard.recent_matches) {
+                const m = lastDashboard.recent_matches.find(r => r.vendor_txn_id === vendorTxnId);
+                if (m) rec = { method: m.method, confidence: m.confidence, reasoning: m.reasoning, decided_at: null, recon_status: 'MATCHED', vendor_txn_id: vendorTxnId, amount: m.amount };
+            }
+            if (!rec) rec = { method: 'deterministic', reasoning: rowEl.querySelector('.reasoning') ? rowEl.querySelector('.reasoning').textContent : null, recon_status: 'MATCHED', vendor_txn_id: vendorTxnId };
+            toggleListReceipt(rowEl, rec);
+            fetchRecordForTxn(vendorTxnId).then(full => {
+                if (full && full.decided_at) {
+                    rec.decided_at = full.decided_at;
+                    rec.method = full.method || rec.method;
+                    rec.confidence = full.confidence != null ? full.confidence : rec.confidence;
+                    const existing = rowEl.querySelector(':scope > .receipt');
+                    if (existing && rowEl.classList.contains('expanded')) {
+                        existing.remove();
+                        toggleListReceipt(rowEl, rec);
+                        const after = rowEl.querySelector(':scope > .receipt');
+                        if (after) after.style.display = 'flex';
+                        rowEl.classList.add('expanded');
+                    }
+                }
+            });
+        };
+
+        const handleRecordExpand = (tr, vendorTxnId) => {
+            // record data already in memory from last fetchRecords — try to use recordsState last data
+            // Fallback to fetch via records endpoint if not found
+            const rec = (window._lastRecords || []).find(r => r.vendor_txn_id === vendorTxnId);
+            if (rec) {
+                toggleTableReceipt(tr, rec);
+            } else {
+                fetchRecordForTxn(vendorTxnId).then(full => {
+                    toggleTableReceipt(tr, full || { method: null, reasoning: null, recon_status: 'UNMATCHED', vendor_txn_id: vendorTxnId });
+                });
+            }
+        };
+
         const fetchConfig = async () => {
             try {
                 const res = await fetch('/api/v1/demo/config');
@@ -1594,10 +2424,10 @@
                             row.classList.add('row-leave');
                         });
                         setTimeout(() => {
-                            tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon">✓</div><div class="empty-title">All settled</div><div class="empty-desc">Every seeded transaction has been matched. Open <strong>Audit Trail</strong> to review, or <strong>Full Records → Export CSV</strong>.</div></div></td></tr>`;
+                            tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">✓</div><div class="empty-title">All settled</div><div class="empty-desc">Every seeded transaction has been matched. Open <strong>Audit Trail</strong> to review, or <strong>Full Records → Export CSV</strong>.</div></div></td></tr>`;
                         }, 350);
                     } else {
-                        tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="empty-title">No pending transactions</div><div class="empty-desc">Click <strong>Check Data</strong> to verify, or run <code>go run ./cmd/seedgen</code> to generate demo data.</div></div></td></tr>`;
+                        tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div><div class="empty-title">No pending transactions</div><div class="empty-desc">Click <strong>Check Data</strong> to verify, or run <code>go run ./cmd/seedgen</code> to generate demo data.</div></div></td></tr>`;
                     }
                     currentPendingIds = newIds;
                     return;
@@ -1606,12 +2436,14 @@
                 let html = '';
                 data.pending_transactions.forEach(txn => {
                     const isNew = !currentPendingIds.has(txn.vendor_txn_id) && !isRecon;
+                    const escId = txn.vendor_txn_id.replace(/'/g, "\\'");
                     html += `
-                        <tr id="row-${txn.vendor_txn_id}" class="${isNew ? 'row-enter' : ''}">
+                        <tr id="row-${txn.vendor_txn_id}" class="${isNew ? 'row-enter' : ''} expandable-row" onclick="handlePendingExpand(this, '${escId}')">
                             <td>${txn.date}</td>
                             <td><span class="utr">${txn.vendor_txn_id}</span></td>
                             <td><span class="utr">${txn.utr_number}</span></td>
                             <td style="text-align:right;" class="amount">₹${formatCurrency(txn.amount)}</td>
+                            <td style="width:24px;"><span class="chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span></td>
                         </tr>
                     `;
                 });
@@ -1632,6 +2464,8 @@
                 }
 
                 currentPendingIds = newIds;
+                // keep Data Sources strip in sync (Razorpay live count)
+                updateSourceCounts();
             } catch (err) {
                 console.error("Dashboard refresh error:", err);
             }
@@ -1682,16 +2516,19 @@
                 return;
             }
 
-            listEl.innerHTML = exceptions.map(e => `
-                <div class="audit-row unresolved">
+            listEl.innerHTML = exceptions.map(e => {
+                const esc = e.vendor_txn_id.replace(/'/g, "\\'");
+                return `
+                <div class="audit-row unresolved expandable-row" onclick="handleExceptionExpand(this, '${esc}')">
                     <div class="row-head">
                         <span class="utr">${e.vendor_txn_id}</span>
                         <span class="amount">₹${formatCurrency(e.amount)}</span>
                         ${e.settlement_id ? `<span class="utr">${e.settlement_id}</span>` : ''}
+                        <span class="chevron" style="margin-left:auto;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
                     </div>
                     <div class="reasoning">${e.reasoning}</div>
                 </div>
-            `).join('');
+            `}).join('');
         };
 
         const renderDecisions = (matches) => {
@@ -1702,17 +2539,20 @@
                 return;
             }
 
-            listEl.innerHTML = matches.map(m => `
-                <div class="audit-row ${m.method}">
+            listEl.innerHTML = matches.map(m => {
+                const esc = m.vendor_txn_id.replace(/'/g, "\\'");
+                return `
+                <div class="audit-row ${m.method} expandable-row" onclick="handleDecisionExpand(this, '${esc}')">
                     <div class="row-head">
                         <span class="chip chip-${m.method}">${m.method}</span>
                         <span class="conf">${(m.confidence * 100).toFixed(0)}% confidence</span>
                         <span class="utr">${m.vendor_txn_id}</span>
                         <span class="amount">₹${formatCurrency(m.amount)}</span>
+                        <span class="chevron" style="margin-left:auto;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span>
                     </div>
                     <div class="reasoning">${m.reasoning}</div>
                 </div>
-            `).join('');
+            `}).join('');
         };
 
         const checkDataStatus = async () => {
@@ -1744,6 +2584,200 @@
             }
         };
 
+        // --- Pipeline Trace helpers ---
+        const TRACE_TIERS = [
+            { n: 1, name: "Exact Settlement ID", desc: "single-settlement narration", confidence: "1.00" },
+            { n: 2, name: "Lumped Settlement", desc: "multi-settlement narration", confidence: "0.90" },
+            { n: 3, name: "Truncated Prefix", desc: "first 8 chars, unique match", confidence: "0.70" },
+            { n: 4, name: "Legacy UTR+Amount", desc: "exact UTR + 3% amount tolerance", confidence: "0.85" },
+        ];
+
+        const showTracePanel = (titleText) => {
+            const panel = document.getElementById('pipeline-trace');
+            const title = document.getElementById('trace-title');
+            const badge = document.getElementById('trace-badge');
+            const body = document.getElementById('trace-body');
+            const summary = document.getElementById('trace-summary');
+            if (!panel || !body) return null;
+            if (title) title.textContent = titleText;
+            if (badge) { badge.textContent = 'RUNNING'; badge.className = 'badge live'; }
+            if (summary) { summary.style.display = 'none'; summary.textContent = ''; }
+            panel.style.display = 'block';
+            try { panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch(e) {}
+            return { panel, body, summary, badge };
+        };
+
+        const showDeterministicPending = () => {
+            const ctx = showTracePanel('Deterministic Engine — Tier-by-Tier Trace');
+            if (!ctx) return;
+            ctx.body.innerHTML = TRACE_TIERS.map(t => `
+                <div class="trace-row pending" id="trace-tier-${t.n}">
+                    <div class="trace-num">${t.n}</div>
+                    <div class="trace-info">
+                        <div class="trace-name">${t.name}</div>
+                        <div class="trace-desc">${t.desc} • conf ${t.confidence}</div>
+                    </div>
+                    <div class="trace-state" id="trace-state-${t.n}">waiting…</div>
+                </div>
+            `).join('');
+        };
+
+        const animateDeterministicTrace = async (agg) => {
+            const body = document.getElementById('trace-body');
+            const summary = document.getElementById('trace-summary');
+            const badge = document.getElementById('trace-badge');
+            if (!body) return;
+            let buckets = { 1: 0, 2: 0, 3: 0, 4: 0 };
+            try {
+                const res = await fetch(`/api/v1/demo/records/${merchantId}?method=deterministic&page_size=100`);
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'records fetch failed');
+                for (const r of (data.records || [])) {
+                    const m = (r.reasoning || '').match(/^Tier\s*(\d)\s*:/);
+                    if (m) {
+                        const n = parseInt(m[1], 10);
+                        if (buckets[n] !== undefined) buckets[n]++;
+                    }
+                }
+            } catch (e) {
+                console.warn('deterministic trace grouping failed, showing aggregate only', e);
+                if (summary && agg) {
+                    summary.style.display = 'block';
+                    summary.innerHTML = `<strong>${agg.total_processed}</strong> records processed in <strong>${agg.elapsed_ms}ms</strong> — <strong>${agg.throughput_per_sec.toLocaleString('en-IN', { maximumFractionDigits: 0 })} records/sec</strong>`;
+                }
+                if (badge) { badge.textContent = 'DONE'; badge.className = 'badge'; }
+                return;
+            }
+            for (let i = 0; i < TRACE_TIERS.length; i++) {
+                const t = TRACE_TIERS[i];
+                await new Promise(r => setTimeout(r, 500));
+                const row = document.getElementById(`trace-tier-${t.n}`);
+                const state = document.getElementById(`trace-state-${t.n}`);
+                if (row && state) {
+                    row.classList.remove('pending');
+                    row.classList.add('done', 'row-enter');
+                    const count = buckets[t.n] || 0;
+                    if (count > 0) {
+                        state.textContent = `✓ ${count} matched • conf ${t.confidence}`;
+                        state.className = 'trace-state done';
+                    } else {
+                        state.textContent = `— 0 matched`;
+                        state.className = 'trace-state muted';
+                    }
+                }
+            }
+            if (summary && agg) {
+                summary.style.display = 'block';
+                summary.innerHTML = `<strong>${agg.total_processed}</strong> records processed in <strong>${agg.elapsed_ms}ms</strong> — <strong>${agg.throughput_per_sec.toLocaleString('en-IN', { maximumFractionDigits: 0 })} records/sec</strong>`;
+            }
+            if (badge) { badge.textContent = 'DONE'; badge.className = 'badge'; }
+        };
+
+        const showAgentPending = async () => {
+            const ctx = showTracePanel('Gemini Agent — Exception Resolution Trace');
+            if (!ctx) return [];
+            ctx.body.innerHTML = `<div class="trace-row" style="justify-content:center; color:var(--muted); padding:16px;">Loading pending exceptions…</div>`;
+            try {
+                const res = await fetch(`/api/v1/demo/records/${merchantId}?status=UNMATCHED&method=unresolved&page_size=50`);
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'fetch failed');
+                const records = data.records || [];
+                if (records.length === 0) {
+                    ctx.body.innerHTML = `<div class="trace-row" style="justify-content:center; color:var(--muted); padding:16px;">No unresolved exceptions to review — deterministic pass covered everything.</div>`;
+                    return [];
+                }
+                ctx.body.innerHTML = records.map(r => `
+                    <div class="trace-row pending" id="trace-agent-${r.vendor_txn_id}">
+                        <div class="trace-num">●</div>
+                        <div class="trace-info">
+                            <div class="trace-name" title="${r.vendor_txn_id}">${r.vendor_txn_id}</div>
+                            <div class="trace-desc">Evaluating pay_… via Gemini</div>
+                        </div>
+                        <div class="trace-state">pending…</div>
+                    </div>
+                `).join('');
+                return records;
+            } catch (e) {
+                console.warn('agent pending fetch failed', e);
+                ctx.body.innerHTML = `<div class="trace-row" style="color:var(--muted); padding:16px; justify-content:center;">Could not load pending exceptions — proceeding with agent call.</div>`;
+                return [];
+            }
+        };
+
+        const revealAgentTrace = async (pendingList) => {
+            const body = document.getElementById('trace-body');
+            const summary = document.getElementById('trace-summary');
+            const badge = document.getElementById('trace-badge');
+            if (!body) return;
+            let agentMap = new Map();
+            try {
+                const res = await fetch(`/api/v1/demo/records/${merchantId}?method=agent&page_size=20`);
+                const data = await res.json();
+                if (res.ok) {
+                    for (const r of (data.records || [])) agentMap.set(r.vendor_txn_id, r);
+                }
+            } catch (e) { console.warn('agent result fetch failed', e); }
+            let unresolvedAfterMap = new Map();
+            try {
+                const res2 = await fetch(`/api/v1/demo/records/${merchantId}?status=UNMATCHED&method=unresolved&page_size=50`);
+                const data2 = await res2.json();
+                if (res2.ok) {
+                    for (const r of (data2.records || [])) unresolvedAfterMap.set(r.vendor_txn_id, r);
+                }
+            } catch (e) {}
+            if (pendingList.length === 0 && agentMap.size > 0) {
+                body.innerHTML = Array.from(agentMap.values()).map(r => `
+                    <div class="trace-row done row-enter" style="border-left:3px solid var(--success);">
+                        <div class="trace-num" style="background:var(--success);border-color:var(--success);color:white">✓</div>
+                        <div class="trace-info">
+                            <div class="trace-name" title="${r.vendor_txn_id}">${r.vendor_txn_id}</div>
+                            <div class="trace-desc" title="${(r.reasoning||'').replace(/"/g,'&quot;')}">${(r.reasoning||'').slice(0,80)}</div>
+                        </div>
+                        <div class="trace-state done">${r.confidence != null ? (r.confidence*100).toFixed(0)+'%' : '—'}</div>
+                    </div>
+                `).join('');
+            } else {
+                for (const p of pendingList) {
+                    await new Promise(r => setTimeout(r, 350));
+                    const row = document.getElementById(`trace-agent-${p.vendor_txn_id}`);
+                    if (!row) continue;
+                    const agentRec = agentMap.get(p.vendor_txn_id);
+                    const stateEl = row.querySelector('.trace-state');
+                    const descEl = row.querySelector('.trace-desc');
+                    const numEl = row.querySelector('.trace-num');
+                    row.classList.remove('pending');
+                    row.classList.add('row-enter');
+                    if (agentRec) {
+                        row.classList.add('done');
+                        row.style.borderLeft = '3px solid var(--success)';
+                        if (numEl) { numEl.textContent = '✓'; numEl.style.background = 'var(--success)'; numEl.style.borderColor = 'var(--success)'; numEl.style.color = 'white'; }
+                        const conf = agentRec.confidence != null ? (agentRec.confidence*100).toFixed(0)+'%' : '—';
+                        const reason = (agentRec.reasoning || '').slice(0, 80);
+                        if (stateEl) { stateEl.textContent = `✓ ${conf}`; stateEl.className = 'trace-state done'; }
+                        if (descEl) { descEl.textContent = reason; descEl.title = agentRec.reasoning || ''; descEl.style.color = 'var(--text-secondary)'; }
+                    } else {
+                        const unr = unresolvedAfterMap.get(p.vendor_txn_id);
+                        const reason = unr ? (unr.reasoning || '').slice(0, 80) : 'still unresolved after review';
+                        row.style.borderLeft = '3px solid var(--border)';
+                        if (numEl) { numEl.textContent = '—'; numEl.style.background = 'var(--surface-muted)'; }
+                        if (stateEl) { stateEl.textContent = 'unresolved'; stateEl.className = 'trace-state muted'; }
+                        if (descEl) { descEl.textContent = reason; descEl.title = unr ? unr.reasoning : ''; }
+                    }
+                }
+            }
+            if (badge) { badge.textContent = 'DONE'; badge.className = 'badge'; }
+            if (summary) {
+                summary.style.display = 'block';
+                const matchedCount = agentMap.size;
+                const total = pendingList.length || matchedCount;
+                if (total === 0) {
+                    summary.textContent = `No exceptions were evaluated`;
+                } else {
+                    summary.innerHTML = `<strong>${total}</strong> exception${total===1?'':'s'} evaluated — <strong>${matchedCount}</strong> resolved by agent`;
+                }
+            }
+        };
+
         const runReconciliation = async () => {
             if (!merchantId) return showToast("Config not loaded yet", "error");
             
@@ -1752,6 +2786,9 @@
             btn.style.opacity = '0.7';
             btn.style.pointerEvents = 'none';
             loader.style.display = 'inline-block';
+
+            // Show tier-by-tier trace immediately, before fetch resolves
+            showDeterministicPending();
 
             try {
                 const res = await fetch('/api/v1/reconcile', {
@@ -1764,6 +2801,15 @@
                 if (res.ok) {
                     lastReconResult = data.result || null;
                     const matched = lastReconResult ? lastReconResult.matched_count : 0;
+                    // Kick off staggered tier reveal without blocking the dashboard refresh
+                    if (lastReconResult) {
+                        animateDeterministicTrace(lastReconResult).catch(e => console.warn('trace animation failed', e));
+                    } else {
+                        const badge = document.getElementById('trace-badge');
+                        const summary = document.getElementById('trace-summary');
+                        if (badge) { badge.textContent = 'DONE'; badge.className = 'badge'; }
+                        if (summary) { summary.style.display = 'block'; summary.textContent = 'No result to trace'; }
+                    }
                     showToast(`Reconciliation complete — matched ${matched} transaction(s).`);
                     await refreshDashboard(true, true);
                     // guide user to next tab based on result
@@ -1777,6 +2823,8 @@
                 }
             } catch (err) {
                 showToast(err.message, "error");
+                const badge = document.getElementById('trace-badge');
+                if (badge) { badge.textContent = 'ERROR'; badge.className = 'badge warn'; }
             } finally {
                 btn.style.opacity = '1';
                 btn.style.pointerEvents = 'auto';
@@ -1793,6 +2841,14 @@
             btn.style.pointerEvents = 'none';
             loader.style.display = 'inline-block';
 
+            // Show live per-row pending trace before the POST
+            let pendingForTrace = [];
+            try {
+                pendingForTrace = await showAgentPending();
+            } catch (e) {
+                console.warn('showAgentPending failed', e);
+            }
+
             try {
                 const res = await fetch('/api/v1/reconcile/agent', {
                     method: 'POST',
@@ -1803,10 +2859,20 @@
 
                 if (res.status === 503) {
                     showToast("Agent unavailable — GEMINI_API_KEY not configured", "error");
+                    const badge = document.getElementById('trace-badge');
+                    if (badge) { badge.textContent = 'UNAVAILABLE'; badge.className = 'badge warn'; }
+                    const summary = document.getElementById('trace-summary');
+                    if (summary) { summary.style.display = 'block'; summary.textContent = 'Agent unavailable — GEMINI_API_KEY not configured on server'; }
                     return;
                 }
 
                 if (res.ok) {
+                    // Update trace rows to real outcomes (real per-row, not approximated)
+                    try {
+                        await revealAgentTrace(pendingForTrace);
+                    } catch (e) {
+                        console.warn('revealAgentTrace failed', e);
+                    }
                     showToast(`Agent review complete — resolved ${data.resolved_count} exception(s).`);
                     await refreshDashboard(true, true);
                     switchWorkspace(data.resolved_count > 0 ? 'decisions' : 'exceptions');
@@ -1815,6 +2881,8 @@
                 }
             } catch (err) {
                 showToast(err.message, "error");
+                const badge = document.getElementById('trace-badge');
+                if (badge) { badge.textContent = 'ERROR'; badge.className = 'badge warn'; }
             } finally {
                 btn.style.opacity = '1';
                 btn.style.pointerEvents = 'auto';
@@ -1876,6 +2944,7 @@
 
             recordsState.totalPages = data.total_pages;
             recordsState.totalCount = data.total_count;
+            window._lastRecords = data.records || [];
             
             renderRecords(data.records);
             updateRecordsPagination();
@@ -1886,12 +2955,14 @@
             const tbody = document.getElementById('records-table-body');
             
             if (!records || records.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="7" style="padding: 28px; text-align: center; color: var(--muted);">No records match the current filters — try clearing filters.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="8" style="padding: 28px; text-align: center; color: var(--muted);">No records match the current filters — try clearing filters.</td></tr>`;
                 return;
             }
 
-            tbody.innerHTML = records.map(r => `
-                <tr class="${r.method || ''}">
+            tbody.innerHTML = records.map(r => {
+                const esc = r.vendor_txn_id.replace(/'/g, "\\'");
+                return `
+                <tr class="${r.method || ''} expandable-row" onclick="handleRecordExpand(this, '${esc}')">
                     <td>
                         <span class="truncated utr" title="${r.vendor_txn_id}">${r.vendor_txn_id}</span>
                     </td>
@@ -1911,8 +2982,9 @@
                     <td>
                         <span class="reasoning-wrap" title="${(r.reasoning||'').replace(/"/g,'&quot;')}">${r.reasoning || '—'}</span>
                     </td>
+                    <td style="width:24px;"><span class="chevron"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></span></td>
                 </tr>
-            `).join('');
+            `}).join('');
         };
 
         const updateRecordsPagination = () => {

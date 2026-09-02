@@ -457,3 +457,98 @@ func derefTime(t *time.Time, def string) string {
 	}
 	return def
 }
+
+// SourceStatus describes one entry in the Data Sources strip.
+type SourceStatus struct {
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	Status      string `json:"status"`
+	RecordCount int    `json:"record_count"`
+	IsLive      bool   `json:"is_live"`
+}
+
+// GetSourceStatus returns live counts and status for all four sources in one request.
+// It powers the Data Sources strip so the frontend needs a single call instead of four.
+func GetSourceStatus(db *pgxpool.Pool) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		merchantID := c.Params("merchantId")
+		if merchantID == "" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "merchantId parameter is required"})
+		}
+
+		ctx := context.Background()
+
+		// Helper to count vendor_transactions for a given vendor_name via vendor_integrations.
+		countVendor := func(vendorName string) int {
+			var n int
+			err := db.QueryRow(ctx, `
+				SELECT COUNT(*)
+				FROM vendor_transactions vt
+				JOIN vendor_integrations vi ON vt.vendor_integration_id = vi.id
+				WHERE vi.merchant_id = $1 AND vi.vendor_name = $2
+			`, merchantID, vendorName).Scan(&n)
+			if err != nil {
+				return 0
+			}
+			return n
+		}
+
+		razorpayCount := countVendor("Razorpay")
+		phonePeCount := countVendor("PhonePe")
+		pineLabsCount := countVendor("PineLabs")
+
+		var bankCount int
+		err := db.QueryRow(ctx, `
+			SELECT COUNT(*)
+			FROM bank_transactions bt
+			JOIN merchant_bank_accounts mba ON bt.bank_account_id = mba.id
+			WHERE mba.merchant_id = $1 AND bt.source = 'setu_aa_mock'
+		`, merchantID).Scan(&bankCount)
+		if err != nil {
+			bankCount = 0
+		}
+
+		// is_live distinguishes Razorpay (real integration) from the three mocks.
+		sources := []SourceStatus{
+			{
+				Name:        "Razorpay",
+				Type:        "gateway",
+				Status:      "connected",
+				RecordCount: razorpayCount,
+				IsLive:      true,
+			},
+			{
+				Name:        "PhonePe",
+				Type:        "gateway",
+				Status:      statusForCount(phonePeCount),
+				RecordCount: phonePeCount,
+				IsLive:      false,
+			},
+			{
+				Name:        "Pine Labs",
+				Type:        "gateway",
+				Status:      statusForCount(pineLabsCount),
+				RecordCount: pineLabsCount,
+				IsLive:      false,
+			},
+			{
+				Name:        "Bank Statement (Setu AA)",
+				Type:        "bank",
+				Status:      statusForCount(bankCount),
+				RecordCount: bankCount,
+				IsLive:      false,
+			},
+		}
+
+		return c.Status(fiber.StatusOK).JSON(fiber.Map{
+			"sources": sources,
+		})
+	}
+}
+
+func statusForCount(n int) string {
+	if n > 0 {
+		return "connected"
+	}
+	return "not_connected"
+}
