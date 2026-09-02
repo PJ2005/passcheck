@@ -342,7 +342,7 @@ func generate(ctx context.Context, tx pgx.Tx, vendorIntegrationID, bankAccountID
 func ensureVendorIntegration(ctx context.Context, tx pgx.Tx, merchantID string) (string, error) {
 	var id string
 	err := tx.QueryRow(ctx,
-		"SELECT id FROM vendor_integrations WHERE merchant_id = $1 LIMIT 1", merchantID).Scan(&id)
+		"SELECT id FROM vendor_integrations WHERE merchant_id = $1 AND vendor_name = 'Razorpay' LIMIT 1", merchantID).Scan(&id)
 	if err == nil {
 		return id, nil
 	}

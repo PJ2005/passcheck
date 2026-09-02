@@ -150,9 +150,12 @@ func main() {
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "no merchants found"})
 		}
-		err = db.Pool.QueryRow(context.Background(), "SELECT id FROM vendor_integrations LIMIT 1").Scan(&providerID)
+		err = db.Pool.QueryRow(context.Background(), "SELECT id FROM vendor_integrations WHERE merchant_id = $1 AND vendor_name = 'Razorpay' LIMIT 1", merchantID).Scan(&providerID)
 		if err != nil {
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "no vendor integrations found"})
+			err = db.Pool.QueryRow(context.Background(), "SELECT id FROM vendor_integrations WHERE merchant_id = $1 LIMIT 1", merchantID).Scan(&providerID)
+			if err != nil {
+				return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "no vendor integrations found"})
+			}
 		}
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{
 			"merchant_id": merchantID,
