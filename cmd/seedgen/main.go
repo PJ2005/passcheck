@@ -156,6 +156,7 @@ func main() {
 	fmt.Printf("Truncated narrations:   %d vendor / %d bank\n", stats.truncatedVendors, stats.truncatedBanks)
 	fmt.Printf("T+1 timing bleeds:      %d vendor / %d bank\n", stats.timingVendors, stats.timingBanks)
 	fmt.Printf("Genuinely orphaned:     %d vendor / 0 bank (no counterpart, expected to remain unresolved)\n", stats.orphanVendors)
+	fmt.Printf("Bank debits (unmatched): 0 vendor / %d bank (fees, payouts, taxes)\n", stats.debitBanks)
 	fmt.Printf("TOTAL:                  %d vendor_transactions + %d bank_transactions = %d records\n",
 		stats.vendorRows, stats.bankRows, stats.vendorRows+stats.bankRows)
 }
@@ -166,6 +167,7 @@ type genStats struct {
 	truncatedVendors, truncatedBanks int
 	timingVendors, timingBanks       int
 	orphanVendors                    int
+	debitBanks                       int
 	vendorRows, bankRows             int
 }
 
@@ -188,12 +190,16 @@ func generate(ctx context.Context, tx pgx.Tx, vendorIntegrationID, bankAccountID
 		}
 		return err
 	}
-	insertBank := func(amount float64, narration, utr string, date time.Time) error {
+	insertBank := func(amount float64, narration, utr string, date time.Time, txnType ...string) error {
+		tt := "CREDIT"
+		if len(txnType) > 0 && txnType[0] != "" {
+			tt = txnType[0]
+		}
 		_, err := tx.Exec(ctx, `
 			INSERT INTO bank_transactions
 				(bank_account_id, amount, txn_type, narration, utr_number, txn_date)
-			VALUES ($1, $2, 'CREDIT', $3, $4, $5)
-		`, bankAccountID, amount, narration, utr, date)
+			VALUES ($1, $2, $3, $4, $5, $6)
+		`, bankAccountID, amount, tt, narration, utr, date)
 		return err
 	}
 
@@ -315,8 +321,35 @@ func generate(ctx context.Context, tx pgx.Tx, vendorIntegrationID, bankAccountID
 		// outcome is an audited 'unresolved' exception, never a false match.
 	}
 
+	// --- Category F: bank account debits (bank charges, MDR fees, payouts, taxes) ---
+	debitCount := 5
+	for i := 0; i < debitCount; i++ {
+		seq++
+		amount := round2(250 + rand.Float64()*9750)
+		bankUtr := genUTR()
+		debitedAt := atDay(dayFor(seq), 10+rand.Intn(8), rand.Intn(60))
+		var narration string
+		switch i % 5 {
+		case 0:
+			narration = fmt.Sprintf("CHG Dr:%s/BANK ANNUAL ACCOUNT MAINTENANCE CHARGES/REF %09d", bankUtr, ref)
+		case 1:
+			narration = fmt.Sprintf("ACH Dr:%s/RAZORPAY MDR CHARGES & GST/REF %09d", bankUtr, ref)
+		case 2:
+			narration = fmt.Sprintf("NEFT Dr:%s/VENDOR INFRASTRUCTURE PAYOUT/REF %09d", bankUtr, ref)
+		case 3:
+			narration = fmt.Sprintf("RTGS Dr:%s/ADVANCE TAX PAYMENT/REF %09d", bankUtr, ref)
+		default:
+			narration = fmt.Sprintf("IMPS Dr:%s/CUSTOMER REFUND DISBURSEMENT/REF %09d", bankUtr, ref)
+		}
+		ref++
+		if err := insertBank(amount, narration, bankUtr, debitedAt, "DEBIT"); err != nil {
+			return nil, err
+		}
+		stats.debitBanks++
+	}
+
 	stats.vendorRows = cleanCount + lumpedCount + truncatedCount + timingBleedCount + orphanCount
-	stats.bankRows = cleanCount + 3 + truncatedCount + timingBleedCount
+	stats.bankRows = cleanCount + 3 + truncatedCount + timingBleedCount + stats.debitBanks
 
 	if stats.vendorRows != totalTxns {
 		return nil, fmt.Errorf("internal error: generated %d vendor rows, expected %d", stats.vendorRows, totalTxns)

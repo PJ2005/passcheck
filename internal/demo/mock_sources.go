@@ -54,6 +54,7 @@ func GenerateMockBankStatementData(ctx context.Context, db *pgxpool.Pool, mercha
 		narration string
 		utr       string
 		txnDate   time.Time
+		txnType   string
 	}
 	var generated []bankGen
 
@@ -61,16 +62,30 @@ func GenerateMockBankStatementData(ctx context.Context, db *pgxpool.Pool, mercha
 		// Amount: 500 to 50000, 2 decimals, mimics Amount string in ReBITFI then parsed to numeric
 		amount := math.Round((500+rand.Float64()*49500)*100) / 100
 		utr := fmt.Sprintf("UTR%013d", 1000000000000+rand.Int63n(8999999999999))
-		// Narration mimics bank statement narration as it appears inside ReBITFI Narration field
-		// Keep it plausible for reconciliation: include a settlement-like token occasionally so
-		// deterministic engine has something to reason over, but not always.
 		var narration string
-		if rand.Float64() < 0.6 {
+		txnType := "CREDIT"
+
+		// Distribute realistic bank statement entries: credits (settlements & inflows) and debits (fees, payouts, taxes)
+		switch i % 5 {
+		case 1:
+			txnType = "DEBIT"
+			narration = fmt.Sprintf("IMPS Dr - %s - VENDOR PAYOUT DISBURSEMENT - REF %09d", utr, 100000000+rand.Intn(900000000))
+		case 3:
+			txnType = "DEBIT"
+			narration = fmt.Sprintf("ACH Dr - %s - PAYMENT GATEWAY FEES & TAX - REF %09d", utr, 100000000+rand.Intn(900000000))
+		case 4:
+			if i%2 == 0 {
+				txnType = "DEBIT"
+				narration = fmt.Sprintf("UPI Dr - %s - REFUND DISBURSEMENT - REF %09d", utr, 100000000+rand.Intn(900000000))
+			} else {
+				txnType = "CREDIT"
+				narration = fmt.Sprintf("NEFT Cr - %s - MERCHANT SETTLEMENT - REF %09d", utr, 100000000+rand.Intn(900000000))
+			}
+		default:
 			setl := fmt.Sprintf("setl_%s", randString(14))
 			narration = fmt.Sprintf("NEFT Cr - %s - RAZORPAY SETL %s - REF %09d", utr, setl, 100000000+rand.Intn(900000000))
-		} else {
-			narration = fmt.Sprintf("NEFT Cr - %s - SALARY CREDIT - REF %09d", utr, 100000000+rand.Intn(900000000))
 		}
+
 		// TransactionTimestamp: random within last 7 days, mapped to txn_date
 		daysAgo := rand.Intn(7)
 		hour := 10 + rand.Intn(10)
@@ -87,15 +102,15 @@ func GenerateMockBankStatementData(ctx context.Context, db *pgxpool.Pool, mercha
 		//   source -> 'setu_aa_mock' to distinguish from seedgen's 'seedgen'
 		_, err := db.Exec(ctx, `
 			INSERT INTO bank_transactions (bank_account_id, amount, txn_type, narration, utr_number, txn_date, source)
-			VALUES ($1, $2, 'CREDIT', $3, $4, $5, 'setu_aa_mock')
-		`, bankAccountID, amount, narration, utr, txnDate)
+			VALUES ($1, $2, $3, $4, $5, $6, 'setu_aa_mock')
+		`, bankAccountID, amount, txnType, narration, utr, txnDate)
 		if err != nil {
 			// If source column doesn't exist yet (migration not applied), fallback without it
 			if isUndefinedColumn(err) {
 				_, fallbackErr := db.Exec(ctx, `
 					INSERT INTO bank_transactions (bank_account_id, amount, txn_type, narration, utr_number, txn_date)
-					VALUES ($1, $2, 'CREDIT', $3, $4, $5)
-				`, bankAccountID, amount, narration, utr, txnDate)
+					VALUES ($1, $2, $3, $4, $5, $6)
+				`, bankAccountID, amount, txnType, narration, utr, txnDate)
 				if fallbackErr != nil {
 					return fmt.Errorf("failed to insert mock bank transaction %d: %w", i, fallbackErr)
 				}
@@ -103,7 +118,7 @@ func GenerateMockBankStatementData(ctx context.Context, db *pgxpool.Pool, mercha
 				return fmt.Errorf("failed to insert mock bank transaction %d: %w", i, err)
 			}
 		}
-		generated = append(generated, bankGen{amount: amount, narration: narration, utr: utr, txnDate: txnDate})
+		generated = append(generated, bankGen{amount: amount, narration: narration, utr: utr, txnDate: txnDate, txnType: txnType})
 	}
 
 	// --- Duplicate bank credit batch (2-3 records) ---
@@ -122,14 +137,14 @@ func GenerateMockBankStatementData(ctx context.Context, db *pgxpool.Pool, mercha
 			dupDate := orig.txnDate.Add(time.Duration(2+rand.Intn(8)) * time.Minute)
 			_, err := db.Exec(ctx, `
 				INSERT INTO bank_transactions (bank_account_id, amount, txn_type, narration, utr_number, txn_date, source)
-				VALUES ($1, $2, 'CREDIT', $3, $4, $5, 'setu_aa_mock_duplicate')
-			`, bankAccountID, orig.amount, orig.narration, orig.utr, dupDate)
+				VALUES ($1, $2, $3, $4, $5, $6, 'setu_aa_mock_duplicate')
+			`, bankAccountID, orig.amount, orig.txnType, orig.narration, orig.utr, dupDate)
 			if err != nil {
 				if isUndefinedColumn(err) {
 					_, fallbackErr := db.Exec(ctx, `
 						INSERT INTO bank_transactions (bank_account_id, amount, txn_type, narration, utr_number, txn_date)
-						VALUES ($1, $2, 'CREDIT', $3, $4, $5)
-					`, bankAccountID, orig.amount, orig.narration, orig.utr, dupDate)
+						VALUES ($1, $2, $3, $4, $5, $6)
+					`, bankAccountID, orig.amount, orig.txnType, orig.narration, orig.utr, dupDate)
 					if fallbackErr != nil {
 						return fmt.Errorf("failed to insert duplicate mock bank transaction %d: %w", i, fallbackErr)
 					}
@@ -258,7 +273,7 @@ func GenerateMockPhonePeData(ctx context.Context, db *pgxpool.Pool, merchantID s
 			nextDupIdx++
 			return c.vendorTxnID, c.amount, c.utr
 		}
-		vid := fmt.Sprintf("T%s%02d", time.Now().Format("20060102150405"), rand.Intn(100))
+		vid := fmt.Sprintf("T%s%06d_%02d", time.Now().Format("20060102150405"), rand.Intn(1000000), rand.Intn(100))
 		amt := math.Round((100+rand.Float64()*4900)*100) / 100
 		utr := fmt.Sprintf("PP_UTR_%05d", rand.Intn(99999))
 		if rand.Float64() < 0.5 {
@@ -280,7 +295,7 @@ func GenerateMockPhonePeData(ctx context.Context, db *pgxpool.Pool, merchantID s
 			// fallback (should not happen)
 			amount = math.Round((100+rand.Float64()*4900)*100) / 100
 			utr = fmt.Sprintf("PP_UTR_%05d", rand.Intn(99999))
-			vendorTxnID = fmt.Sprintf("T%s%02d", time.Now().Format("20060102150405"), rand.Intn(100))
+			vendorTxnID = fmt.Sprintf("T%s%06d_%02d", time.Now().Format("20060102150405"), rand.Intn(1000000), rand.Intn(100))
 		}
 		// For non-duplicate clean rows that weren't reused, we already have fresh values from pick
 		// For duplicate rows, amount/utr are from candidate, vendorTxnID is reused
@@ -370,7 +385,7 @@ func GenerateMockPhonePeData(ctx context.Context, db *pgxpool.Pool, merchantID s
 	// Orphan: deliberately NO bank counterpart — genuine "payment initiated but settlement not yet received"
 	for i := 0; i < orphanCount; i++ {
 		amount := math.Round((100+rand.Float64()*4900)*100) / 100
-		vendorTxnID := fmt.Sprintf("T%s%02d", time.Now().Format("20060102150405"), rand.Intn(100))
+		vendorTxnID := fmt.Sprintf("T%s%06d_%02d", time.Now().Format("20060102150405"), rand.Intn(1000000), rand.Intn(100))
 		utr := fmt.Sprintf("PP_UTR_%05d", rand.Intn(99999))
 		if rand.Float64() < 0.5 {
 			utr = fmt.Sprintf("PP_UTR_MOCK_%05d", rand.Intn(99999))

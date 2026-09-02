@@ -3056,7 +3056,7 @@
 
             // 2. Vendor Txn ID (full, no truncation)
             const vendorTxnCell = isUnmatchedBank
-                ? `<span class="empty-cell-pill">No vendor-side transaction claims this credit</span>`
+                ? `<span class="empty-cell-pill">${r.bank_txn_type === 'DEBIT' ? 'No vendor transaction claims this debit' : 'No vendor-side transaction claims this credit'}</span>`
                 : `<span class="mono">${escapeHtml(r.vendor_txn_id || '—')}</span>`;
 
             // 3. Settlement ID (full, no truncation)
