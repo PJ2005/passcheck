@@ -535,6 +535,7 @@
         .seg-deterministic { background: var(--success); }
         .seg-agent { background: var(--primary); }
         .seg-unresolved { background: var(--error); }
+        .seg-duplicate { background: var(--faint); }
 
         .method-labels {
             display: flex;
@@ -564,6 +565,7 @@
         .dot-success { background: var(--success); }
         .dot-accent { background: var(--primary); }
         .dot-error { background: var(--error); }
+        .dot-duplicate { background: var(--faint); }
 
         /* Workspace tabs */
         .workspace-tabs {
@@ -720,6 +722,7 @@
         .audit-row.deterministic { border-left-color: var(--success); }
         .audit-row.agent { border-left-color: var(--primary); }
         .audit-row.unresolved { border-left-color: var(--error); }
+        .audit-row.duplicate { border-left-color: var(--faint); }
 
         .row-head {
             display: flex;
@@ -770,7 +773,13 @@
             color: var(--error);
         }
 
-        .chip:not(.chip-deterministic):not(.chip-agent):not(.chip-unresolved) {
+        .chip-duplicate {
+            background: var(--surface-muted);
+            border-color: var(--border);
+            color: var(--muted);
+        }
+
+        .chip:not(.chip-deterministic):not(.chip-agent):not(.chip-unresolved):not(.chip-duplicate) {
             background: var(--surface-muted);
             color: var(--muted);
         }
@@ -865,6 +874,7 @@
         .records-table tbody tr.deterministic { border-left-color: var(--success); }
         .records-table tbody tr.agent { border-left-color: var(--primary); }
         .records-table tbody tr.unresolved { border-left-color: var(--error); }
+        .records-table tbody tr.duplicate { border-left-color: var(--faint); }
 
         .truncated {
             max-width: 140px;
@@ -917,6 +927,12 @@
             background: var(--warning-bg);
             border-color: var(--warning-border);
             color: var(--warning);
+        }
+
+        .status-duplicate {
+            background: var(--surface-muted);
+            border-color: var(--border);
+            color: var(--muted);
         }
 
         .confidence-cell {
@@ -1577,6 +1593,79 @@
             padding: 0 2px;
         }
 
+        /* Source card step-list — animated per-source flow */
+        .source-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding: 10px 14px;
+            border-top: 1px solid var(--border);
+            background: #FCFDFE;
+        }
+
+        .source-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            color: var(--muted);
+            padding: 4px 0;
+            opacity: 0;
+            transform: translateX(-6px);
+            transition: opacity 200ms, transform 200ms, color 200ms;
+        }
+
+        .source-step.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .source-step.done {
+            color: var(--success);
+        }
+
+        .source-step.pulsing .step-spinner {
+            animation: spin 700ms linear infinite, pulse 1.2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.45; }
+            100% { opacity: 1; }
+        }
+
+        .step-spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--border-strong);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .source-step.done .step-spinner {
+            border: 1px solid var(--success);
+            background: var(--success);
+            display: grid;
+            place-items: center;
+        }
+
+        .step-text {
+            flex: 1;
+            line-height: 1.3;
+        }
+
+        .step-status {
+            font-size: 10px;
+            color: var(--faint);
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .source-step.done .step-status {
+            color: var(--success);
+        }
+
         /* Responsive */
         @media (max-width: 960px) {
             header {
@@ -1679,7 +1768,7 @@
                     <span class="source-count-label">records</span>
                 </div>
             </div>
-            <div class="source-card" id="source-phonepe" role="button" tabindex="0" onclick="showToast('PhonePe integration — coming soon')" onkeydown="if(event.key==='Enter') showToast('PhonePe integration — coming soon')">
+            <div class="source-card" id="source-phonepe" role="button" tabindex="0" onclick="connectSource('phonepe')" onkeydown="if(event.key==='Enter') connectSource('phonepe')">
                 <div class="source-head">
                     <div class="source-monogram">P</div>
                     <div class="source-meta">
@@ -1689,12 +1778,12 @@
                     <span class="source-status muted">Not connected</span>
                 </div>
                 <div class="source-foot">
-                    <span class="source-count muted">—</span>
+                    <span class="source-count muted" id="src-count-phonepe">—</span>
                     <span class="source-count-label">records</span>
                     <span class="source-connect">+ Connect</span>
                 </div>
             </div>
-            <div class="source-card" id="source-pinelabs" role="button" tabindex="0" onclick="showToast('Pine Labs integration — coming soon')" onkeydown="if(event.key==='Enter') showToast('Pine Labs integration — coming soon')">
+            <div class="source-card" id="source-pinelabs" role="button" tabindex="0" onclick="connectSource('pinelabs')" onkeydown="if(event.key==='Enter') connectSource('pinelabs')">
                 <div class="source-head">
                     <div class="source-monogram">Pi</div>
                     <div class="source-meta">
@@ -1704,12 +1793,12 @@
                     <span class="source-status muted">Not connected</span>
                 </div>
                 <div class="source-foot">
-                    <span class="source-count muted">—</span>
+                    <span class="source-count muted" id="src-count-pinelabs">—</span>
                     <span class="source-count-label">records</span>
                     <span class="source-connect">+ Connect</span>
                 </div>
             </div>
-            <div class="source-card" id="source-bank" role="button" tabindex="0" onclick="showToast('Bank Statement integration — coming soon')" onkeydown="if(event.key==='Enter') showToast('Bank Statement integration — coming soon')">
+            <div class="source-card" id="source-bank" role="button" tabindex="0" onclick="connectSource('bank')" onkeydown="if(event.key==='Enter') connectSource('bank')">
                 <div class="source-head">
                     <div class="source-monogram">B</div>
                     <div class="source-meta">
@@ -1719,7 +1808,7 @@
                     <span class="source-status muted">Not connected</span>
                 </div>
                 <div class="source-foot">
-                    <span class="source-count muted">—</span>
+                    <span class="source-count muted" id="src-count-bank">—</span>
                     <span class="source-count-label">records</span>
                     <span class="source-connect">+ Connect</span>
                 </div>
@@ -1809,11 +1898,13 @@
                 <div class="seg seg-deterministic" id="seg-deterministic"></div>
                 <div class="seg seg-agent" id="seg-agent"></div>
                 <div class="seg seg-unresolved" id="seg-unresolved"></div>
+                <div class="seg seg-duplicate" id="seg-duplicate"></div>
             </div>
             <div class="method-labels">
                 <span><i class="dot dot-success"></i>Deterministic <b id="lbl-deterministic">0</b></span>
                 <span><i class="dot dot-accent"></i>Agent <b id="lbl-agent">0</b></span>
                 <span><i class="dot dot-error"></i>Unresolved <b id="lbl-unresolved">0</b></span>
+                <span><i class="dot dot-duplicate"></i>Duplicate <b id="lbl-duplicate">0</b></span>
                 <span style="margin-left:auto; font-size:11px; color: var(--faint);">Left border = method</span>
             </div>
         </div>
@@ -1906,6 +1997,7 @@
                                         <option value="">All</option>
                                         <option value="MATCHED">Matched</option>
                                         <option value="UNMATCHED">Unmatched</option>
+                                        <option value="DUPLICATE_SUPPRESSED">Duplicate</option>
                                     </select>
                                 </div>
                                 <div class="filter-group">
@@ -1915,6 +2007,7 @@
                                         <option value="deterministic">Deterministic</option>
                                         <option value="agent">Agent</option>
                                         <option value="unresolved">Unresolved</option>
+                                        <option value="duplicate">Duplicate</option>
                                     </select>
                                 </div>
                                 <div style="flex:1;"></div>
@@ -2115,6 +2208,212 @@
             el.classList.remove('muted');
         };
 
+        const refreshSourceStatus = async () => {
+            if (!merchantId) return;
+            try {
+                const res = await fetch(`/api/v1/demo/sources/${merchantId}`);
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'failed');
+                const sources = data.sources || [];
+                const idMap = {
+                    'Razorpay': 'source-razorpay',
+                    'PhonePe': 'source-phonepe',
+                    'Pine Labs': 'source-pinelabs',
+                    'Bank Statement (Setu AA)': 'source-bank'
+                };
+                const countIdMap = {
+                    'Razorpay': 'src-count-razorpay',
+                    'PhonePe': 'src-count-phonepe',
+                    'Pine Labs': 'src-count-pinelabs',
+                    'Bank Statement (Setu AA)': 'src-count-bank'
+                };
+                for (const src of sources) {
+                    const cardId = idMap[src.name];
+                    const countId = countIdMap[src.name];
+                    if (!cardId) continue;
+                    const card = document.getElementById(cardId);
+                    if (!card) continue;
+                    const statusEl = card.querySelector('.source-status');
+                    const countEl = countId ? document.getElementById(countId) : card.querySelector('.source-count');
+                    if (statusEl) {
+                        if (src.status === 'connected') {
+                            if (src.is_live) {
+                                statusEl.className = 'source-status live';
+                                statusEl.innerHTML = '<span class="status-dot"></span>Connected · Live';
+                            } else {
+                                statusEl.className = 'source-status live';
+                                statusEl.textContent = 'Connected';
+                            }
+                        } else {
+                            statusEl.className = 'source-status muted';
+                            statusEl.textContent = 'Not connected';
+                        }
+                    }
+                    if (countEl) {
+                        if (src.record_count > 0) {
+                            countEl.textContent = String(src.record_count);
+                            countEl.classList.remove('muted');
+                        } else {
+                            if (src.name === 'Razorpay') {
+                                countEl.textContent = '0';
+                                countEl.classList.remove('muted');
+                            } else {
+                                countEl.textContent = '—';
+                                countEl.classList.add('muted');
+                            }
+                        }
+                    }
+                    const connectEl = card.querySelector('.source-connect');
+                    if (connectEl) {
+                        connectEl.style.display = src.status === 'connected' ? 'none' : 'inline-flex';
+                    }
+                }
+            } catch (e) {
+                console.warn('refreshSourceStatus failed', e);
+            }
+        };
+
+        const connectSource = async (sourceName) => {
+            const displayNames = { phonepe: 'PhonePe', pinelabs: 'Pine Labs', bank: 'Bank Statement' };
+            const endpoints = { phonepe: 'phonepe', pinelabs: 'pinelabs', bank: 'bank' };
+            const cardIdMap = { phonepe: 'source-phonepe', pinelabs: 'source-pinelabs', bank: 'source-bank' };
+            const display = displayNames[sourceName] || sourceName;
+            const endpoint = endpoints[sourceName] || sourceName;
+            if (!merchantId) return showToast('Config not loaded yet', 'error');
+
+            const card = document.getElementById(cardIdMap[sourceName]);
+            if (!card) return showToast('Source card not found', 'error');
+            if (card.dataset.connecting === '1') return;
+            card.dataset.connecting = '1';
+
+            // Prepare step definitions — genuinely different per source type
+            let steps;
+            if (sourceName === 'bank') {
+                steps = [
+                    "Authenticating with Setu (client credentials)...",
+                    "Creating AA consent request...",
+                    "Awaiting consent approval...",
+                    "Consent approved — creating data session...",
+                    "Fetching FI data session...",
+                    "Parsing ReBIT FI schema (accounts → transactions)...",
+                ];
+            } else if (sourceName === 'phonepe') {
+                steps = [
+                    "Authenticating with PhonePe (merchant ID + salt key)...",
+                    "Generating X-VERIFY checksum...",
+                    "Fetching settlement report...",
+                ];
+            } else if (sourceName === 'pinelabs') {
+                steps = [
+                    "Authenticating with Pine Labs (API key)...",
+                    "Requesting settlement report...",
+                ];
+            } else {
+                steps = ["Connecting..."];
+            }
+
+            const foot = card.querySelector('.source-foot');
+            if (foot) foot.style.display = 'none';
+            let stepsEl = card.querySelector('.source-steps');
+            if (stepsEl) stepsEl.remove();
+            stepsEl = document.createElement('div');
+            stepsEl.className = 'source-steps';
+            card.appendChild(stepsEl);
+
+            // Render pending steps
+            steps.forEach((text, idx) => {
+                const row = document.createElement('div');
+                row.className = 'source-step pending';
+                if (sourceName === 'bank' && idx === 2) row.classList.add('pulsing');
+                row.innerHTML = `<span class="step-spinner"></span><span class="step-text">${text}</span><span class="step-status"></span>`;
+                stepsEl.appendChild(row);
+                setTimeout(() => row.classList.add('visible', 'row-enter'), idx * 70);
+            });
+
+            const markDone = (row, doneText) => {
+                row.classList.remove('pending');
+                row.classList.add('done');
+                const spinner = row.querySelector('.step-spinner');
+                if (spinner) {
+                    spinner.style.border = 'none';
+                    spinner.style.background = 'var(--success)';
+                    spinner.innerHTML = '<span style="color:white;font-size:8px;display:grid;place-items:center;width:100%;height:100%;">✓</span>';
+                    spinner.style.display = 'grid';
+                    spinner.style.placeItems = 'center';
+                }
+                const status = row.querySelector('.step-status');
+                if (status) { status.textContent = doneText || 'done'; status.style.color = 'var(--success)'; }
+            };
+
+            // Sequentially animate the simulated steps
+            for (let i = 0; i < steps.length; i++) {
+                const isPulsingStep = sourceName === 'bank' && i === 2;
+                const delay = isPulsingStep ? 1200 : 700 + Math.random() * 200;
+                await new Promise(r => setTimeout(r, delay));
+                const row = stepsEl.children[i];
+                if (row) markDone(row, 'done');
+            }
+
+            // Final step — real API call
+            const finalRow = document.createElement('div');
+            finalRow.className = 'source-step pending';
+            finalRow.innerHTML = `<span class="step-spinner"></span><span class="step-text">Importing records...</span><span class="step-status"></span>`;
+            stepsEl.appendChild(finalRow);
+            setTimeout(() => finalRow.classList.add('visible', 'row-enter'), 50);
+            await new Promise(r => setTimeout(r, 300));
+
+            try {
+                showToast(`Connecting to ${display}...`);
+                const res = await fetch(`/api/v1/demo/sources/${endpoint}/simulate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ merchant_id: merchantId, count: 10 })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'simulate failed');
+                // Populate final step with real count
+                finalRow.classList.remove('pending');
+                finalRow.classList.add('done');
+                const spinner = finalRow.querySelector('.step-spinner');
+                if (spinner) {
+                    spinner.style.border = 'none';
+                    spinner.style.background = 'var(--success)';
+                    spinner.innerHTML = '<span style="color:white;font-size:8px;display:grid;place-items:center;width:100%;height:100%;">✓</span>';
+                    spinner.style.display = 'grid';
+                    spinner.style.placeItems = 'center';
+                }
+                const textEl = finalRow.querySelector('.step-text');
+                if (textEl) textEl.textContent = `Imported ${data.count} ${display} records`;
+                const statusEl = finalRow.querySelector('.step-status');
+                if (statusEl) { statusEl.textContent = 'done'; statusEl.style.color = 'var(--success)'; }
+                showToast(data.message || `Simulated ${data.count} ${display} records`);
+                await new Promise(r => setTimeout(r, 500));
+                await refreshSourceStatus();
+                await refreshDashboard();
+                await new Promise(r => setTimeout(r, 900));
+                stepsEl.remove();
+                if (foot) foot.style.display = 'flex';
+                card.dataset.connecting = '';
+            } catch (err) {
+                finalRow.classList.remove('pending');
+                const spinner = finalRow.querySelector('.step-spinner');
+                if (spinner) {
+                    spinner.style.border = '1px solid var(--error)';
+                    spinner.style.background = 'var(--error-bg)';
+                    spinner.innerHTML = '<span style="color:var(--error);font-size:10px;">×</span>';
+                    spinner.style.display = 'grid';
+                    spinner.style.placeItems = 'center';
+                }
+                const textEl = finalRow.querySelector('.step-text');
+                if (textEl) textEl.textContent = `Failed: ${err.message}`;
+                showToast(err.message, 'error');
+                await new Promise(r => setTimeout(r, 1800));
+                stepsEl.remove();
+                if (foot) foot.style.display = 'flex';
+                card.dataset.connecting = '';
+            }
+        };
+
         // Decision receipt helpers — inline, not modal
         const formatDecidedAt = (iso) => {
             if (!iso) return '—';
@@ -2181,6 +2480,8 @@
                     html += `</span></span></div>`;
                 }
             } else if (method === 'unresolved') {
+                if (rec.confidence != null) html += `<div class="receipt-row"><span class="receipt-label">Confidence</span><span class="receipt-value mono">${(rec.confidence*100).toFixed(0)}%</span></div>`;
+            } else if (method === 'duplicate') {
                 if (rec.confidence != null) html += `<div class="receipt-row"><span class="receipt-label">Confidence</span><span class="receipt-value mono">${(rec.confidence*100).toFixed(0)}%</span></div>`;
             }
             // Reasoning (full, not truncated)
@@ -2412,7 +2713,7 @@
                 updateStepper({
                     pendingCount: data.pending_transactions.length,
                     exceptionCount: data.exception_count,
-                    hasDecisions: decCount > 0 || (data.method_breakdown && (data.method_breakdown.deterministic || data.method_breakdown.agent))
+                    hasDecisions: decCount > 0 || (data.method_breakdown && (data.method_breakdown.deterministic || data.method_breakdown.agent || data.method_breakdown.duplicate))
                 });
 
                 const tbody = document.getElementById('table-body');
@@ -2466,6 +2767,7 @@
                 currentPendingIds = newIds;
                 // keep Data Sources strip in sync (Razorpay live count)
                 updateSourceCounts();
+                refreshSourceStatus();
             } catch (err) {
                 console.error("Dashboard refresh error:", err);
             }
@@ -2476,7 +2778,8 @@
             const det = mb.deterministic || 0;
             const agent = mb.agent || 0;
             const unresolved = mb.unresolved || 0;
-            const total = det + agent + unresolved;
+            const duplicate = mb.duplicate || 0;
+            const total = det + agent + unresolved + duplicate;
 
             const rateEl = document.getElementById('stat-match-rate');
             if (total === 0) {
@@ -2502,9 +2805,11 @@
             document.getElementById('seg-deterministic').style.width = pct(det) + '%';
             document.getElementById('seg-agent').style.width = pct(agent) + '%';
             document.getElementById('seg-unresolved').style.width = pct(unresolved) + '%';
+            document.getElementById('seg-duplicate').style.width = pct(duplicate) + '%';
             document.getElementById('lbl-deterministic').innerText = det;
             document.getElementById('lbl-agent').innerText = agent;
             document.getElementById('lbl-unresolved').innerText = unresolved;
+            document.getElementById('lbl-duplicate').innerText = duplicate;
         };
 
         const renderExceptions = (exceptions) => {
@@ -2971,7 +3276,7 @@
                         ${r.settlement_id ? `<span class="truncated utr" title="${r.settlement_id}">${r.settlement_id}</span>` : '<span style="color: var(--faint);">—</span>'}
                     </td>
                     <td>
-                        <span class="status-badge ${r.recon_status === 'MATCHED' ? 'status-matched' : 'status-unmatched'}">${r.recon_status}</span>
+                        <span class="status-badge ${r.recon_status === 'MATCHED' ? 'status-matched' : r.recon_status === 'DUPLICATE_SUPPRESSED' ? 'status-duplicate' : 'status-unmatched'}">${r.recon_status}</span>
                     </td>
                     <td>
                         ${r.method ? `<span class="chip chip-${r.method}">${r.method}</span>` : '<span style="color: var(--faint);">—</span>'}

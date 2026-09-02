@@ -174,9 +174,10 @@ func GetReconciliationDashboard(db *pgxpool.Pool) fiber.Handler {
 		}
 
 		// 6. Method breakdown: how many decisions each layer made. Seeded with
-		// all three methods so an honest zero stays visible in the JSON (e.g.
-		// agent: 0 proves the deterministic pass did all the work).
-		methodBreakdown := map[string]int{"deterministic": 0, "agent": 0, "unresolved": 0}
+		// all four methods so an honest zero stays visible in the JSON (e.g.
+		// agent: 0 proves the deterministic pass did all the work, duplicate: 0
+		// proves no cross-source duplicates were suppressed).
+		methodBreakdown := map[string]int{"deterministic": 0, "agent": 0, "unresolved": 0, "duplicate": 0}
 		mbRows, err := db.Query(ctx, `
 			SELECT rl.method, COUNT(*)
 			FROM reconciliation_log rl
