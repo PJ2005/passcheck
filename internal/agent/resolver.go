@@ -230,11 +230,11 @@ func fetchCandidates(ctx context.Context, tx pgx.Tx, merchantID string, v unreso
 		  AND bt.txn_date >= $2 AND bt.txn_date < $3
 		  AND bt.amount >= $4 * 0.90 AND bt.amount <= $4 * 1.02
 		  AND NOT EXISTS (
-		      SELECT 1 FROM reconciled_matches rm WHERE rm.bank_transaction_id = bt.id
+		      SELECT 1 FROM reconciled_matches rm WHERE rm.bank_transaction_id = bt.id AND rm.vendor_transaction_id = $5
 		  )
 		ORDER BY ABS(bt.amount - $4)
 		LIMIT 5
-	`, merchantID, windowLo, windowHi, v.Amount)
+	`, merchantID, windowLo, windowHi, v.Amount, v.ID)
 	if err != nil {
 		return nil, err
 	}

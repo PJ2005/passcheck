@@ -247,6 +247,8 @@ type ReconciliationRecord struct {
 	DecidedAt      *string  `json:"decided_at,omitempty"`
 	VendorName     *string  `json:"vendor_name,omitempty"`
 	BankTxnType    *string  `json:"bank_txn_type,omitempty"`
+	RecordType     string   `json:"record_type"` // "vendor" or "bank"
+	Side           string   `json:"side"`        // "vendor" or "bank"
 }
 
 // ReconciliationRecordsResponse is the JSON envelope for paginated results.
@@ -270,7 +272,7 @@ func GetReconciliationRecords(db *pgxpool.Pool) fiber.Handler {
 
 		// Parse query parameters
 		statusFilter := c.Query("status") // MATCHED, UNMATCHED, or empty for all
-		methodFilter := c.Query("method") // deterministic, agent, unresolved, or empty for all
+		methodFilter := c.Query("method") // deterministic, agent, unresolved, duplicate, or empty for all
 
 		page, err := strconv.Atoi(c.Query("page", "1"))
 		if err != nil || page < 1 {
@@ -289,30 +291,69 @@ func GetReconciliationRecords(db *pgxpool.Pool) fiber.Handler {
 
 		ctx := context.Background()
 
-		// Build base query with filters
+		// Build base query with UNION of vendor-side and unmatched bank-side transactions
 		baseQuery := `
-			FROM vendor_transactions vt
-			JOIN vendor_integrations vi ON vt.vendor_integration_id = vi.id
-			LEFT JOIN LATERAL (
-				SELECT r.method, r.confidence, r.reasoning, r.created_at, r.bank_transaction_id
-				FROM reconciliation_log r
-				WHERE r.vendor_transaction_id = vt.id
-				ORDER BY r.created_at DESC
-				LIMIT 1
-			) rl ON true
-			LEFT JOIN bank_transactions bt ON bt.id = rl.bank_transaction_id
-			WHERE vi.merchant_id = $1
+			FROM (
+				SELECT 
+					vt.vendor_txn_id AS transaction_id,
+					vt.amount,
+					vt.settlement_id,
+					COALESCE(vt.utr_number, '') AS utr_number,
+					vt.settlement_date,
+					vt.recon_status::text AS recon_status,
+					rl.method::text AS method,
+					rl.confidence,
+					rl.reasoning,
+					rl.created_at AS decided_at,
+					vi.vendor_name,
+					NULL::text AS bank_txn_type,
+					'vendor'::text AS record_type
+				FROM vendor_transactions vt
+				JOIN vendor_integrations vi ON vt.vendor_integration_id = vi.id
+				LEFT JOIN LATERAL (
+					SELECT r.method, r.confidence, r.reasoning, r.created_at, r.bank_transaction_id
+					FROM reconciliation_log r
+					WHERE r.vendor_transaction_id = vt.id
+					ORDER BY r.created_at DESC
+					LIMIT 1
+				) rl ON true
+				WHERE vi.merchant_id = $1
+
+				UNION ALL
+
+				SELECT 
+					COALESCE(NULLIF(bt.utr_number, ''), bt.id::text) AS transaction_id,
+					bt.amount,
+					NULL::text AS settlement_id,
+					COALESCE(bt.utr_number, '') AS utr_number,
+					bt.txn_date::date AS settlement_date,
+					CASE WHEN bt.duplicate_of IS NOT NULL THEN 'DUPLICATE_SUPPRESSED' ELSE 'UNMATCHED' END AS recon_status,
+					CASE WHEN bt.duplicate_of IS NOT NULL THEN 'duplicate' ELSE NULL END AS method,
+					NULL::numeric AS confidence,
+					COALESCE(bt.narration, 'Unmatched bank statement credit') AS reasoning,
+					bt.created_at AS decided_at,
+					'Bank Statement' AS vendor_name,
+					bt.txn_type::text AS bank_txn_type,
+					'bank'::text AS record_type
+				FROM bank_transactions bt
+				JOIN merchant_bank_accounts mba ON bt.bank_account_id = mba.id
+				WHERE mba.merchant_id = $1
+				  AND NOT EXISTS (
+					  SELECT 1 FROM reconciled_matches rm WHERE rm.bank_transaction_id = bt.id
+				  )
+			) rec
+			WHERE 1=1
 		`
 		args := []any{merchantID}
 		argIdx := 2
 
 		if statusFilter != "" {
-			baseQuery += fmt.Sprintf(" AND vt.recon_status = $%d", argIdx)
+			baseQuery += fmt.Sprintf(" AND rec.recon_status = $%d", argIdx)
 			args = append(args, statusFilter)
 			argIdx++
 		}
 		if methodFilter != "" {
-			baseQuery += fmt.Sprintf(" AND rl.method = $%d", argIdx)
+			baseQuery += fmt.Sprintf(" AND rec.method = $%d", argIdx)
 			args = append(args, methodFilter)
 			argIdx++
 		}
@@ -337,12 +378,12 @@ func GetReconciliationRecords(db *pgxpool.Pool) fiber.Handler {
 
 		// Paginated query
 		selectQuery := `
-			SELECT vt.vendor_txn_id, vt.amount, vt.settlement_id, vt.utr_number,
-			       vt.settlement_date, vt.recon_status,
-			       rl.method, rl.confidence, rl.reasoning, rl.created_at,
-			       vi.vendor_name, bt.txn_type
+			SELECT rec.transaction_id, rec.amount, rec.settlement_id, rec.utr_number,
+			       rec.settlement_date, rec.recon_status,
+			       rec.method, rec.confidence, rec.reasoning, rec.decided_at,
+			       rec.vendor_name, rec.bank_txn_type, rec.record_type
 		` + baseQuery + `
-			ORDER BY vt.settlement_date DESC
+			ORDER BY rec.settlement_date DESC, rec.transaction_id DESC
 			LIMIT $` + strconv.Itoa(argIdx) + ` OFFSET $` + strconv.Itoa(argIdx+1)
 
 		limitArgs := append(args, pageSize, (page-1)*pageSize)
@@ -370,12 +411,14 @@ func GetReconciliationRecords(db *pgxpool.Pool) fiber.Handler {
 				&decidedAt,
 				&rec.VendorName,
 				&rec.BankTxnType,
+				&rec.RecordType,
 			); err == nil {
 				rec.SettlementDate = settlementDate.Format("2006-01-02")
 				if decidedAt != nil {
 					s := decidedAt.Format(time.RFC3339)
 					rec.DecidedAt = &s
 				}
+				rec.Side = rec.RecordType
 				records = append(records, rec)
 			}
 		}
@@ -397,12 +440,12 @@ func GetReconciliationRecords(db *pgxpool.Pool) fiber.Handler {
 func streamCSVExport(c *fiber.Ctx, db *pgxpool.Pool, ctx context.Context, baseQuery string, args []any, merchantID string) error {
 	// Query ALL matching records (no pagination)
 	selectQuery := `
-		SELECT vt.vendor_txn_id, vt.amount, vt.settlement_id, vt.utr_number,
-		       vt.settlement_date, vt.recon_status,
-		       rl.method, rl.confidence, rl.reasoning, rl.created_at,
-		       vi.vendor_name, bt.txn_type
+		SELECT rec.transaction_id, rec.amount, rec.settlement_id, rec.utr_number,
+		       rec.settlement_date, rec.recon_status,
+		       rec.method, rec.confidence, rec.reasoning, rec.decided_at,
+		       rec.vendor_name, rec.bank_txn_type, rec.record_type
 	` + baseQuery + `
-		ORDER BY vt.settlement_date DESC
+		ORDER BY rec.settlement_date DESC, rec.transaction_id DESC
 	`
 
 	rows, err := db.Query(ctx, selectQuery, args...)
@@ -421,26 +464,27 @@ func streamCSVExport(c *fiber.Ctx, db *pgxpool.Pool, ctx context.Context, baseQu
 	writer := csv.NewWriter(c.Response().BodyWriter())
 
 	// Write header
-	header := []string{"vendor_txn_id", "amount", "settlement_id", "utr_number", "settlement_date", "recon_status", "vendor_name", "bank_txn_type", "method", "confidence", "reasoning", "decided_at"}
+	header := []string{"record_type", "transaction_id", "amount", "settlement_id", "utr_number", "settlement_date", "recon_status", "vendor_name", "bank_txn_type", "method", "confidence", "reasoning", "decided_at"}
 	if err := writer.Write(header); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to write CSV header", "details": err.Error()})
 	}
 
 	// Stream rows
 	for rows.Next() {
-		var vendorTxnID, utrNumber, reconStatus string
+		var txnID, utrNumber, reconStatus, recordType string
 		var amount float64
 		var settlementID, method, reasoning, vendorName, bankTxnType *string
 		var confidence *float64
 		var settlementDate time.Time
 		var decidedAt *time.Time
 
-		if err := rows.Scan(&vendorTxnID, &amount, &settlementID, &utrNumber, &settlementDate, &reconStatus, &method, &confidence, &reasoning, &decidedAt, &vendorName, &bankTxnType); err != nil {
+		if err := rows.Scan(&txnID, &amount, &settlementID, &utrNumber, &settlementDate, &reconStatus, &method, &confidence, &reasoning, &decidedAt, &vendorName, &bankTxnType, &recordType); err != nil {
 			continue
 		}
 
 		row := []string{
-			vendorTxnID,
+			recordType,
+			txnID,
 			strconv.FormatFloat(amount, 'f', 2, 64),
 			derefString(settlementID, ""),
 			utrNumber,

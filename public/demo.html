@@ -1460,6 +1460,9 @@
         .bank-type.credit { background: var(--success-bg); border-color: var(--success-border); color: var(--success); }
         .bank-type.debit { background: var(--surface-muted); border-color: var(--border); color: var(--text-secondary); }
         .bank-type.awaiting { background: var(--surface-muted); border-color: var(--border); color: var(--muted); font-style: italic; font-weight: 500; }
+        .side-badge { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 4px; border: 1px solid; display: inline-flex; align-items: center; white-space: nowrap; letter-spacing: 0.02em; }
+        .side-badge.vendor { background: var(--surface-muted); border-color: var(--border); color: var(--text-secondary); }
+        .side-badge.bank { background: rgba(37, 99, 235, 0.08); border-color: rgba(37, 99, 235, 0.25); color: #1d4ed8; }
 
         .human-reason {
             font-size: 12px;
@@ -2244,33 +2247,6 @@
             if (ws) ws.scrollIntoView({ behavior: 'smooth', block: 'start' });
         };
 
-        const updateSourceCounts = async () => {
-            const el = document.getElementById('src-count-razorpay');
-            if (!el || !merchantId) return;
-            try {
-                const res = await fetch(`/api/v1/demo/records/${merchantId}?page_size=1`);
-                const data = await res.json();
-                if (res.ok && typeof data.total_count === 'number') {
-                    el.textContent = String(data.total_count);
-                    el.classList.remove('muted');
-                    return;
-                }
-            } catch (e) {}
-            if (lastDashboard) {
-                const pending = (lastDashboard.pending_transactions || []).length;
-                const det = (lastDashboard.method_breakdown && lastDashboard.method_breakdown.deterministic) || 0;
-                const ag = (lastDashboard.method_breakdown && lastDashboard.method_breakdown.agent) || 0;
-                const totalApprox = pending + det + ag;
-                if (totalApprox > 0) {
-                    el.textContent = String(totalApprox);
-                    el.classList.remove('muted');
-                    return;
-                }
-            }
-            el.textContent = '0';
-            el.classList.remove('muted');
-        };
-
         const refreshSourceStatus = async () => {
             if (!merchantId) return;
             try {
@@ -2333,6 +2309,16 @@
                 }
             } catch (e) {
                 console.warn('refreshSourceStatus failed', e);
+            }
+        };
+
+        // Ensures every count on the page (source strip, summary cards, health stats, full records) reflects the same moment in time after any data-changing action — previously each section refreshed independently and could show stale or inconsistent numbers relative to each other.
+        const refreshEverything = async (animateNumbers = false, isRecon = false) => {
+            await refreshSourceStatus();
+            await refreshDashboard(animateNumbers, isRecon);
+            const recordsActive = document.getElementById('panel-records')?.classList.contains('active') || document.querySelector('.tab[data-tab="records"].active') !== null;
+            if (recordsActive && recordsState && recordsState.loaded) {
+                await fetchRecords();
             }
         };
 
@@ -2451,8 +2437,7 @@
                 if (statusEl) { statusEl.textContent = 'done'; statusEl.style.color = 'var(--success)'; }
                 showToast(data.message || `Simulated ${data.count} ${display} records`);
                 await new Promise(r => setTimeout(r, 500));
-                await refreshSourceStatus();
-                await refreshDashboard();
+                await refreshEverything();
                 await new Promise(r => setTimeout(r, 900));
                 stepsEl.remove();
                 if (foot) foot.style.display = 'flex';
@@ -2792,7 +2777,7 @@
                         switchWorkspace(saved);
                     }
                 } catch (e) {}
-                await refreshDashboard();
+                await refreshEverything();
             } catch (err) {
                 showToast("Failed to load config: " + err.message, "error");
             }
@@ -2892,9 +2877,6 @@
                 }
 
                 currentPendingIds = newIds;
-                // keep Data Sources strip in sync (Razorpay live count)
-                updateSourceCounts();
-                refreshSourceStatus();
             } catch (err) {
                 console.error("Dashboard refresh error:", err);
             }
@@ -3001,7 +2983,7 @@
             loader.style.display = 'inline-block';
 
             try {
-                await refreshDashboard(false, false);
+                await refreshEverything(false, false);
 
                 if (!lastDashboard || !lastDashboard.pending_transactions || lastDashboard.pending_transactions.length === 0) {
                     showToast("No transactions found. Generate synthetic data first: go run ./cmd/seedgen", "error");
@@ -3247,7 +3229,7 @@
                         if (summary) { summary.style.display = 'block'; summary.textContent = 'No result to trace'; }
                     }
                     showToast(`Reconciliation complete — matched ${matched} transaction(s).`);
-                    await refreshDashboard(true, true);
+                    await refreshEverything(true, true);
                     // guide user to next tab based on result
                     if (lastDashboard && lastDashboard.exception_count > 0) {
                         switchWorkspace('exceptions');
@@ -3310,7 +3292,7 @@
                         console.warn('revealAgentTrace failed', e);
                     }
                     showToast(`Agent review complete — resolved ${data.resolved_count} exception(s).`);
-                    await refreshDashboard(true, true);
+                    await refreshEverything(true, true);
                     switchWorkspace(data.resolved_count > 0 ? 'decisions' : 'exceptions');
                 } else {
                     throw new Error(data.error || "Agent resolution failed");
@@ -3396,18 +3378,20 @@
             }
 
             tbody.innerHTML = records.map(r => {
-                const esc = r.vendor_txn_id.replace(/'/g, "\\'");
+                const esc = (r.vendor_txn_id || '').replace(/'/g, "\\'");
+                const isBank = r.record_type === 'bank' || r.side === 'bank';
                 return `
                 <tr class="${r.method || ''} expandable-row" onclick="handleRecordExpand(this, '${esc}')">
                     <td>
-                        <div style="display:flex; align-items:center; gap:6px;">
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                             ${sourceBadge(r.vendor_name)}
                             <span class="truncated utr" title="${r.vendor_txn_id}">${r.vendor_txn_id}</span>
+                            <span class="side-badge ${isBank ? 'bank' : 'vendor'}">${isBank ? 'Bank Statement' : 'Vendor Ledger'}</span>
                         </div>
                     </td>
                     <td class="amount-right">
                         <div>₹${formatCurrency(r.amount)}</div>
-                        <div style="margin-top:4px; display:flex; justify-content:flex-end;">${bankTypeBadge(r.bank_txn_type)}</div>
+                        ${isBank ? `<div style="margin-top:4px; display:flex; justify-content:flex-end;">${bankTypeBadge(r.bank_txn_type)}</div>` : ''}
                     </td>
                     <td>
                         ${r.settlement_id ? `<span class="truncated utr" title="${r.settlement_id}">${r.settlement_id}</span>` : '<span style="color: var(--faint);">—</span>'}
