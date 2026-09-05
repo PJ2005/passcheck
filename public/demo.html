@@ -207,7 +207,7 @@
 
         /* Runbook / Stepper */
         .runbook {
-            max-width: 1200px;
+            max-width: 1280px;
             margin: 20px auto 0;
             padding: 0 24px;
         }
@@ -308,13 +308,91 @@
 
         /* Main layout */
         main {
-            max-width: 1200px;
+            max-width: 1280px;
             margin: 0 auto;
             padding: 20px 24px 40px;
             display: flex;
             flex-direction: column;
             gap: 16px;
         }
+
+        /* Layer 1 — Plain-language status (4 cards) */
+        .plain-status {
+            max-width: 1200px;
+            margin: 20px auto 0;
+            padding: 0 24px;
+        }
+
+        .plain-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .plain-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+            min-height: 110px;
+        }
+
+        .plain-card h3 {
+            margin: 0;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: -0.01em;
+        }
+
+        .plain-card .plain-amount {
+            font-family: var(--font-mono);
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1;
+            letter-spacing: -0.02em;
+        }
+
+        .plain-card .plain-sub {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+
+        .plain-card.needs-attention {
+            border-left: 4px solid var(--error);
+            background: var(--error-bg);
+        }
+
+        .plain-card.needs-attention.calm {
+            border-left: 4px solid var(--border);
+            background: var(--surface);
+            opacity: 0.85;
+        }
+
+        .plain-card .method-bar-mini {
+            height: 6px;
+            margin-top: 4px;
+        }
+
+        .plain-summary {
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        .plain-summary strong { color: var(--text); }
 
         /* KPI grid — compact, no blur, no giant fonts */
         .metrics-grid {
@@ -870,14 +948,14 @@
 
         .audit-table {
             width: 100%;
-            min-width: 1680px;
+            min-width: 1180px;
             border-collapse: collapse;
             font-size: 12px;
             text-align: left;
         }
 
         .audit-table th {
-            padding: 8px 12px;
+            padding: 7px 8px;
             font-weight: 600;
             color: var(--text-secondary);
             border-bottom: 1px solid var(--border);
@@ -887,13 +965,13 @@
         }
 
         .audit-table .thead-group-row th {
-            padding: 8px 12px 6px;
+            padding: 6px 8px 5px;
             border-bottom: 1px solid var(--border);
             background: var(--surface-muted);
         }
 
         .audit-table .thead-cols-row th {
-            padding: 7px 12px;
+            padding: 6px 8px;
             background: var(--surface);
             font-size: 11px;
             color: var(--muted);
@@ -901,11 +979,11 @@
         }
 
         .audit-table td {
-            padding: 10px 12px;
+            padding: 8px 8px;
             border-bottom: 1px solid var(--border);
             vertical-align: middle;
             color: var(--text);
-            line-height: 1.4;
+            line-height: 1.35;
         }
 
         .audit-table tbody tr:hover {
@@ -927,10 +1005,10 @@
 
         /* Divider column between Vendor and Bank sides */
         .th-divider, .col-divider {
-            width: 110px;
-            min-width: 110px;
-            max-width: 110px;
-            padding: 0 4px !important;
+            width: 96px;
+            min-width: 96px;
+            max-width: 96px;
+            padding: 0 2px !important;
             text-align: center;
         }
 
@@ -940,7 +1018,7 @@
             background: var(--surface-muted);
             text-align: center;
             vertical-align: middle;
-            padding: 6px 8px !important;
+            padding: 5px 6px !important;
             white-space: nowrap;
         }
 
@@ -998,6 +1076,25 @@
             white-space: nowrap;
         }
 
+        /* Inside audit table cells, allow long IDs to wrap onto two lines
+           rather than forcing the column to full mono-nowrap width.
+           This is what makes the table fit a 1366px laptop without scrolling.
+           No text is hidden or truncated — all characters remain visible. */
+        .audit-table td .mono {
+            white-space: normal;
+            word-break: break-all;
+        }
+
+        /* Narrow specific columns by capping their max-width */
+        .col-vendor-txn  { max-width: 150px; min-width: 100px; }
+        .col-settlement  { max-width: 130px; min-width: 80px; }
+        .col-bank-utr    { max-width: 120px; min-width: 80px; }
+        .col-method      { max-width: 100px; min-width: 70px; }
+        .col-confidence  { max-width: 80px;  min-width: 60px; }
+        .col-vendor-date { max-width: 90px;  min-width: 78px; }
+        .col-bank-date   { max-width: 90px;  min-width: 78px; }
+        .col-bank-type   { max-width: 70px;  min-width: 55px; }
+
         .amount-mono {
             font-family: var(--font-mono);
             font-size: 12px;
@@ -1027,15 +1124,15 @@
             font-size: 11px;
             line-height: 1.35;
             color: var(--text);
-            min-width: 240px;
-            max-width: 380px;
+            min-width: 150px;
+            max-width: 220px;
             word-break: break-word;
             white-space: normal;
         }
 
         .reasoning-cell {
-            min-width: 260px;
-            max-width: 420px;
+            min-width: 170px;
+            max-width: 240px;
             line-height: 1.35;
         }
 
@@ -1314,7 +1411,7 @@
 
         /* Pipeline Trace panel — same card treatment as dashboard */
         .pipeline-trace {
-            max-width: 1200px;
+            max-width: 1280px;
             margin: 16px auto 0;
             padding: 0 24px;
         }
@@ -1669,7 +1766,7 @@
 
         /* Data Sources strip */
         .data-sources {
-            max-width: 1200px;
+            max-width: 1280px;
             margin: 16px auto 0;
             padding: 0 24px;
         }
@@ -2032,6 +2129,8 @@
                 padding: 12px 16px;
             }
             .header-center { order: 3; width: 100%; justify-content: flex-start; }
+            .plain-grid { grid-template-columns: repeat(2, 1fr); }
+            .plain-status { padding: 0 16px; }
             .metrics-grid { grid-template-columns: 1fr; }
             .perf-grid { grid-template-columns: 1fr; }
             .data-sources-grid { grid-template-columns: 1fr; }
@@ -2041,10 +2140,52 @@
             .runbook-card { flex-direction: column; align-items: flex-start; }
         }
 
+        /* Mobile card fallback — replaces wide table at <640px */
+        .audit-cards-mobile { display: none; }
+
         @media (max-width: 640px) {
             .actions { width: 100%; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
             .actions::-webkit-scrollbar { display: none; }
             th, td { padding: 8px 10px; }
+            .plain-grid { grid-template-columns: 1fr; }
+            .plain-card { min-height: 44px; }
+            /* Layer 2: hide wide table, show stacked cards */
+            .audit-table-wrapper { display: none !important; }
+            .audit-cards-mobile { display: flex; flex-direction: column; gap: 12px; padding: 12px; background: #FCFDFE; }
+            .audit-card {
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 12px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+            .audit-card .audit-card-section {
+                padding: 8px;
+                background: var(--surface-muted);
+                border: 1px solid var(--border);
+                border-radius: 6px;
+            }
+            .audit-card .audit-card-section.vendor { border-left: 3px solid var(--text-secondary); }
+            .audit-card .audit-card-section.bank { border-left: 3px solid var(--primary); }
+            .audit-card .audit-card-reasoning {
+                padding: 8px;
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                font-size: 12px;
+                line-height: 1.4;
+                color: var(--text-secondary);
+            }
+            /* Tabs and filters remain usable */
+            .workspace-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+            .workspace-tabs::-webkit-scrollbar { display: none; }
+            .workspace-tabs .tab { flex: 0 0 auto; min-height: 44px; }
+            .records-toolbar { flex-direction: column; align-items: stretch; gap: 10px; }
+            .records-toolbar .filter-group { width: 100%; }
+            .filter-select { width: 100%; min-height: 44px; }
+            .btn { min-height: 44px; }
         }
     </style>
 </head>
@@ -2081,6 +2222,38 @@
             </button>
         </div>
     </header>
+
+    <!-- Layer 1 — Plain-language status (new) -->
+    <section class="plain-status" aria-label="Summary">
+        <div class="plain-grid">
+            <div class="plain-card" id="plain-your-money">
+                <h3>Your Money</h3>
+                <div class="plain-amount" id="plain-your-money-amount">₹0.00</div>
+                <div class="plain-sub">This is what your payment records say you should have received.</div>
+            </div>
+            <div class="plain-card" id="plain-confirmed">
+                <h3>Confirmed by Bank</h3>
+                <div class="plain-amount" id="plain-confirmed-amount">₹0.00</div>
+                <div class="plain-sub">This much has been checked against your real bank statement.</div>
+            </div>
+            <div class="plain-card" id="plain-needs-card">
+                <h3>Needs Your Attention</h3>
+                <div class="plain-amount" id="plain-needs-amount">0 payments • ₹0.00</div>
+                <div class="plain-sub" id="plain-needs-sub">All clear — nothing needs a manual look right now.</div>
+            </div>
+            <div class="plain-card" id="plain-how-checked">
+                <h3>How It Was Checked</h3>
+                <div class="method-bar method-bar-mini" title="Share of decisions by method">
+                    <div class="seg seg-deterministic" id="plain-seg-deterministic"></div>
+                    <div class="seg seg-agent" id="plain-seg-agent"></div>
+                    <div class="seg seg-unresolved" id="plain-seg-unresolved"></div>
+                    <div class="seg seg-duplicate" id="plain-seg-duplicate"></div>
+                </div>
+                <div class="plain-sub" id="plain-how-text">No checks yet — run the engine to see the breakdown.</div>
+            </div>
+        </div>
+        <div class="plain-summary" id="plain-summary" role="status" aria-live="polite">Loading your payments…</div>
+    </section>
 
     <!-- Pipeline Trace — hidden by default, appears on Run Engine / Run Agent -->
     <div id="pipeline-trace" class="pipeline-trace" style="display:none;">
@@ -2309,6 +2482,13 @@
             </div>
         </div>
 
+        <!-- Layer 2 — Detailed Records (progressive disclosure) -->
+        <section aria-label="Detailed records" style="margin-top: 8px;">
+            <div style="padding: 4px 2px 8px;">
+                <h2 style="margin:0; font-size:14px; font-weight:700; letter-spacing:-0.01em;">Detailed Records — for verification</h2>
+                <p style="margin:4px 0 0; font-size:12px; color:var(--muted); line-height:1.4;">Every automatic decision, in full detail, with the exact reasoning.</p>
+            </div>
+        </section>
         <!-- Workspace — tabbed instead of 4 stacked tables -->
         <div class="card" id="workspace">
             <div class="workspace-tabs" role="tablist" aria-label="Reconciliation workspace">
@@ -2344,18 +2524,18 @@
                                 </tr>
                                 <tr class="thead-cols-row">
                                     <th>Source</th>
-                                    <th>Vendor Txn ID</th>
-                                    <th>Settlement ID</th>
+                                    <th class="col-vendor-txn">Vendor Txn ID</th>
+                                    <th class="col-settlement">Settlement ID</th>
                                     <th style="text-align:right;">Vendor Amount</th>
-                                    <th>Vendor Date</th>
+                                    <th class="col-vendor-date">Vendor Date</th>
                                     <th class="th-divider">Status</th>
-                                    <th>Bank UTR</th>
+                                    <th class="col-bank-utr">Bank UTR</th>
                                     <th>Bank Narration</th>
                                     <th style="text-align:right;">Bank Amount</th>
-                                    <th>Bank Date</th>
-                                    <th>Type</th>
-                                    <th>Method</th>
-                                    <th>Confidence</th>
+                                    <th class="col-bank-date">Bank Date</th>
+                                    <th class="col-bank-type">Type</th>
+                                    <th class="col-method">Method</th>
+                                    <th class="col-confidence">Conf.</th>
                                     <th>Reasoning</th>
                                 </tr>
                             </thead>
@@ -2372,6 +2552,7 @@
                             </tbody>
                         </table>
                     </div>
+                    <div class="audit-cards-mobile" id="mobile-pending-cards" aria-label="Pending transactions as cards"></div>
                     <div style="padding:10px 14px; border-top:1px solid var(--border); display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                         <span style="font-size:12px; color:var(--muted);">Tip: Run the engine — rows will slide out as they are matched. The count above updates instantly.</span>
                     </div>
@@ -2390,18 +2571,18 @@
                                 </tr>
                                 <tr class="thead-cols-row">
                                     <th>Source</th>
-                                    <th>Vendor Txn ID</th>
-                                    <th>Settlement ID</th>
+                                    <th class="col-vendor-txn">Vendor Txn ID</th>
+                                    <th class="col-settlement">Settlement ID</th>
                                     <th style="text-align:right;">Vendor Amount</th>
-                                    <th>Vendor Date</th>
+                                    <th class="col-vendor-date">Vendor Date</th>
                                     <th class="th-divider">Status</th>
-                                    <th>Bank UTR</th>
+                                    <th class="col-bank-utr">Bank UTR</th>
                                     <th>Bank Narration</th>
                                     <th style="text-align:right;">Bank Amount</th>
-                                    <th>Bank Date</th>
-                                    <th>Type</th>
-                                    <th>Method</th>
-                                    <th>Confidence</th>
+                                    <th class="col-bank-date">Bank Date</th>
+                                    <th class="col-bank-type">Type</th>
+                                    <th class="col-method">Method</th>
+                                    <th class="col-confidence">Conf.</th>
                                     <th>Reasoning</th>
                                 </tr>
                             </thead>
@@ -2418,6 +2599,7 @@
                             </tbody>
                         </table>
                     </div>
+                    <div class="audit-cards-mobile" id="mobile-exceptions-cards" aria-label="Exceptions as cards"></div>
                 </div>
 
                 <!-- Decisions / Audit Trail -->
@@ -2433,18 +2615,18 @@
                                 </tr>
                                 <tr class="thead-cols-row">
                                     <th>Source</th>
-                                    <th>Vendor Txn ID</th>
-                                    <th>Settlement ID</th>
+                                    <th class="col-vendor-txn">Vendor Txn ID</th>
+                                    <th class="col-settlement">Settlement ID</th>
                                     <th style="text-align:right;">Vendor Amount</th>
-                                    <th>Vendor Date</th>
+                                    <th class="col-vendor-date">Vendor Date</th>
                                     <th class="th-divider">Match</th>
-                                    <th>Bank UTR</th>
+                                    <th class="col-bank-utr">Bank UTR</th>
                                     <th>Bank Narration</th>
                                     <th style="text-align:right;">Bank Amount</th>
-                                    <th>Bank Date</th>
-                                    <th>Type</th>
-                                    <th>Method</th>
-                                    <th>Confidence</th>
+                                    <th class="col-bank-date">Bank Date</th>
+                                    <th class="col-bank-type">Type</th>
+                                    <th class="col-method">Method</th>
+                                    <th class="col-confidence">Conf.</th>
                                     <th>Reasoning</th>
                                 </tr>
                             </thead>
@@ -2461,6 +2643,7 @@
                             </tbody>
                         </table>
                     </div>
+                    <div class="audit-cards-mobile" id="mobile-decisions-cards" aria-label="Decisions as cards"></div>
                 </div>
 
                 <!-- Full Records -->
@@ -2514,24 +2697,25 @@
                                         </tr>
                                         <tr class="thead-cols-row">
                                             <th>Source</th>
-                                            <th>Vendor Txn ID</th>
-                                            <th>Settlement ID</th>
+                                            <th class="col-vendor-txn">Vendor Txn ID</th>
+                                            <th class="col-settlement">Settlement ID</th>
                                             <th style="text-align:right;">Vendor Amount</th>
-                                            <th>Vendor Date</th>
+                                            <th class="col-vendor-date">Vendor Date</th>
                                             <th class="th-divider">Status</th>
-                                            <th>Bank UTR</th>
+                                            <th class="col-bank-utr">Bank UTR</th>
                                             <th>Bank Narration</th>
                                             <th style="text-align:right;">Bank Amount</th>
-                                            <th>Bank Date</th>
-                                            <th>Type</th>
-                                            <th>Method</th>
-                                            <th>Confidence</th>
+                                            <th class="col-bank-date">Bank Date</th>
+                                            <th class="col-bank-type">Type</th>
+                                            <th class="col-method">Method</th>
+                                            <th class="col-confidence">Conf.</th>
                                             <th>Reasoning</th>
                                         </tr>
                                     </thead>
                                     <tbody id="records-table-body"></tbody>
                                 </table>
                             </div>
+                            <div class="audit-cards-mobile" id="mobile-records-cards" aria-label="Full records as cards"></div>
 
                             <div class="pagination-controls" id="records-pagination" style="display:none;">
                                 <button class="pagination-btn" id="records-prev" onclick="onRecordsPageChange(-1)" disabled>← Previous</button>
@@ -3183,6 +3367,53 @@
             return records.map(r => renderAuditTableRow(r)).join('');
         };
 
+        const renderAuditCard = (r) => {
+            const cat = r.record_category || (r.bank_amount != null && r.vendor_amount != null ? 'matched_pair' : (r.bank_amount != null ? 'unmatched_bank' : 'unmatched_vendor'));
+            const isMatched = cat === 'matched_pair';
+            const primaryReason = humanizeReasoning(r.reasoning, r.method || (isMatched ? 'deterministic' : 'unresolved'));
+            const techReason = (r.reasoning && r.reasoning.trim() !== primaryReason.trim()) ? r.reasoning : '';
+            return `
+                <div class="audit-card ${r.method || ''}">
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        ${sourceBadge(r.vendor_source || r.vendor_name || 'Razorpay')}
+                        <span class="chip chip-${r.method || (isMatched ? 'deterministic' : 'unresolved')}">${r.method || (isMatched ? 'deterministic' : 'unresolved')}</span>
+                        <span style="margin-left:auto; font-size:11px; color:var(--muted);">${r.vendor_txn_id ? `<span class="mono" style="word-break:break-all;">${escapeHtml(r.vendor_txn_id)}</span>` : ''}</span>
+                    </div>
+                    <div class="audit-card-section vendor">
+                        <div style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">Vendor</div>
+                        <div style="display:flex; flex-direction:column; gap:4px; font-size:12px;">
+                            <div><span style="color:var(--muted);">Amount:</span> <span class="amount-mono">₹${formatCurrency(r.vendor_amount)}</span></div>
+                            <div><span style="color:var(--muted);">Settlement:</span> <span class="mono" style="word-break:break-all;">${escapeHtml(r.vendor_settlement_id || '—')}</span></div>
+                            <div><span style="color:var(--muted);">Date:</span> <span class="date-mono">${r.vendor_settlement_date ? r.vendor_settlement_date.substring(0,10) : '—'}</span></div>
+                        </div>
+                    </div>
+                    <div class="audit-card-section bank">
+                        <div style="font-size:11px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px;">Bank</div>
+                        <div style="display:flex; flex-direction:column; gap:4px; font-size:12px;">
+                            <div><span style="color:var(--muted);">UTR:</span> <span class="mono" style="word-break:break-all;">${escapeHtml(r.bank_utr || r.bank_txn_id || '—')}</span></div>
+                            <div><span style="color:var(--muted);">Narration:</span> <span class="narration-full" style="max-width:none;">${escapeHtml(r.bank_narration || '—')}</span></div>
+                            <div><span style="color:var(--muted);">Amount:</span> <span class="amount-mono">${r.bank_amount != null ? '₹'+formatCurrency(r.bank_amount) : '—'}</span> ${bankTypeBadge(r.bank_txn_type || 'CREDIT')}</div>
+                            <div><span style="color:var(--muted);">Date:</span> <span class="date-mono">${r.bank_txn_date ? r.bank_txn_date.substring(0,10) : '—'}</span></div>
+                        </div>
+                    </div>
+                    <div class="audit-card-reasoning">
+                        <div class="reasoning-primary">${escapeHtml(primaryReason)}</div>
+                        ${techReason ? `<div class="reasoning-secondary">${escapeHtml(techReason)}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        };
+
+        const renderAuditCardsMobile = (records, containerId, emptyTitle, emptyDesc) => {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            if (!records || records.length === 0) {
+                container.innerHTML = `<div class="empty-state"><div class="empty-title">${emptyTitle || 'No records'}</div><div class="empty-desc">${emptyDesc || ''}</div></div>`;
+                return;
+            }
+            container.innerHTML = records.map(r => renderAuditCard(r)).join('');
+        };
+
         const buildReceiptHTML = (rec) => {
             // rec: { method, confidence, reasoning, decided_at, settlement_id, recon_status, vendor_txn_id, amount }
             if (!rec || (!rec.method && !rec.reasoning && !rec.recon_status)) {
@@ -3430,6 +3661,7 @@
                 if (footPending) footPending.textContent = `${data.pending_transactions.length} transaction${data.pending_transactions.length===1?'':'s'}`;
 
                 renderPerformancePanel(data);
+                updatePlainStatus(data);
                 renderExceptions(data.exceptions || []);
                 renderDecisions(data.recent_matches || []);
 
@@ -3456,16 +3688,19 @@
                                 'All transactions have been matched. Review the Audit Trail or Full Records tab.'
                             );
                         }
+                        renderAuditCardsMobile(pendingRecords, 'mobile-pending-cards', 'No pending transactions', 'All transactions have been matched.');
                         const pendingCountEl = document.getElementById('pending-count');
                         if (pendingCountEl) pendingCountEl.innerText = `${pendingRecords.length} UNMATCHED`;
 
                         // 2. Exceptions table: unmatched vendor rows
                         const excRecords = allRecords.filter(r => r.record_category === 'unmatched_vendor');
                         renderExceptions(excRecords);
+                        renderAuditCardsMobile(excRecords, 'mobile-exceptions-cards', 'No unresolved exceptions', 'Everything is matched.');
 
                         // 3. Decisions / Audit Trail: matched pairs
                         const decRecords = allRecords.filter(r => r.record_category === 'matched_pair');
                         renderDecisions(decRecords);
+                        renderAuditCardsMobile(decRecords, 'mobile-decisions-cards', 'No decisions yet', 'After reconciliation runs, verified pairs appear here.');
 
                         // 4. Records count badge
                         const recBadge = document.getElementById('records-badge');
@@ -3536,6 +3771,73 @@
             document.getElementById('lbl-agent').innerText = agent;
             document.getElementById('lbl-unresolved').innerText = unresolved;
             document.getElementById('lbl-duplicate').innerText = duplicate;
+
+            // Also update plain-language How It Was Checked bar (Layer 1) — same data, no new endpoint
+            const plainDet = document.getElementById('plain-seg-deterministic');
+            const plainAg = document.getElementById('plain-seg-agent');
+            const plainUn = document.getElementById('plain-seg-unresolved');
+            const plainDup = document.getElementById('plain-seg-duplicate');
+            if (plainDet) plainDet.style.width = pct(det) + '%';
+            if (plainAg) plainAg.style.width = pct(agent) + '%';
+            if (plainUn) plainUn.style.width = pct(unresolved) + '%';
+            if (plainDup) plainDup.style.width = pct(duplicate) + '%';
+        };
+
+        const updatePlainStatus = (data) => {
+            const yourMoneyEl = document.getElementById('plain-your-money-amount');
+            const confirmedEl = document.getElementById('plain-confirmed-amount');
+            const needsAmountEl = document.getElementById('plain-needs-amount');
+            const needsSubEl = document.getElementById('plain-needs-sub');
+            const needsCard = document.getElementById('plain-needs-card');
+            const howTextEl = document.getElementById('plain-how-text');
+            const summaryEl = document.getElementById('plain-summary');
+
+            if (yourMoneyEl) yourMoneyEl.textContent = `₹${formatCurrency(data.total_expected_funds || 0)}`;
+            if (confirmedEl) confirmedEl.textContent = `₹${formatCurrency(data.total_settled_funds || 0)}`;
+
+            const pendingCount = data.exception_count || 0;
+            const pendingAmt = data.total_pending_funds || 0;
+            if (needsAmountEl) needsAmountEl.textContent = `${pendingCount} payments • ₹${formatCurrency(pendingAmt)}`;
+            if (needsSubEl) {
+                needsSubEl.textContent = pendingCount > 0
+                    ? `${pendingCount} payments couldn't be automatically confirmed yet.`
+                    : `All clear — nothing needs a manual look right now.`;
+            }
+            if (needsCard) {
+                needsCard.classList.remove('needs-attention', 'calm');
+                // Make most prominent when count >0
+                if (pendingCount > 0) {
+                    needsCard.classList.add('needs-attention');
+                } else {
+                    needsCard.classList.add('needs-attention', 'calm');
+                }
+            }
+
+            const mb = data.method_breakdown || {};
+            const det = mb.deterministic || 0;
+            const agent = mb.agent || 0;
+            const unresolved = mb.unresolved || 0;
+            const duplicate = mb.duplicate || 0;
+            const total = det + agent + unresolved + duplicate;
+            if (howTextEl) {
+                if (total === 0) {
+                    howTextEl.textContent = `No checks yet — run the engine to see the breakdown.`;
+                } else {
+                    howTextEl.textContent = `${det} automatically matched by exact records, ${agent} confirmed using AI review, ${unresolved + duplicate} still need a manual look.`;
+                }
+            }
+
+            if (summaryEl) {
+                const rate = total > 0 ? ((det + agent) / total * 100) : 0;
+                const pct = total > 0 ? rate.toFixed(0) : "0";
+                if (total === 0) {
+                    summaryEl.textContent = `No payments to confirm yet — seed data and run the engine.`;
+                } else if (pendingCount > 0) {
+                    summaryEl.innerHTML = `<strong>${pct}%</strong> of your payments are confirmed. <strong>${pendingCount} need attention</strong> — see below.`;
+                } else {
+                    summaryEl.innerHTML = `<strong>${pct}%</strong> of your payments are confirmed. All clear.`;
+                }
+            }
         };
 
         const renderExceptions = (exceptions) => {
@@ -3550,6 +3852,7 @@
                     'Everything is matched. Exceptions left by the deterministic pass appear here for agent review.'
                 );
             }
+            renderAuditCardsMobile(exceptions, 'mobile-exceptions-cards', 'No unresolved exceptions', 'Everything is matched.');
         };
 
         const renderDecisions = (matches) => {
@@ -3564,6 +3867,7 @@
                     'After reconciliation runs, verified matched pairs with side-by-side amounts and dates appear here.'
                 );
             }
+            renderAuditCardsMobile(matches, 'mobile-decisions-cards', 'No decisions yet', 'After reconciliation runs, verified matched pairs appear here.');
         };
 
         const checkDataStatus = async () => {
@@ -3972,6 +4276,7 @@
                     'Try clearing or changing your category, status, or method filters.'
                 );
             }
+            renderAuditCardsMobile(records, 'mobile-records-cards', 'No records match the current filters', 'Try clearing or changing your category, status, or method filters.');
         };
 
         const updateRecordsPagination = () => {
@@ -4027,6 +4332,34 @@
 
         // Initialize
         window.addEventListener('DOMContentLoaded', fetchConfig);
+
+        window.addEventListener('load', () => {
+            setTimeout(async () => {
+                try {
+                    switchWorkspace('decisions');
+                    await new Promise(r => setTimeout(r, 600));
+                    const table = document.querySelector('#panel-decisions .audit-table');
+                    const wrapper = document.querySelector('#panel-decisions .audit-table-wrapper');
+                    const main = document.querySelector('main');
+                    const res = {
+                        windowWidth: window.innerWidth,
+                        mainWidth: main ? main.offsetWidth : null,
+                        tableComputedWidth: table ? window.getComputedStyle(table).width : null,
+                        tableOffsetWidth: table ? table.offsetWidth : null,
+                        tableScrollWidth: table ? table.scrollWidth : null,
+                        wrapperClientWidth: wrapper ? wrapper.clientWidth : null,
+                        wrapperScrollWidth: wrapper ? wrapper.scrollWidth : null,
+                        hasHorizontalScroll: wrapper ? (wrapper.scrollWidth > wrapper.clientWidth) : null
+                    };
+                    const el = document.createElement('pre');
+                    el.id = 'TABLE_BENCHMARK_RESULT';
+                    el.textContent = JSON.stringify(res);
+                    document.body.appendChild(el);
+                } catch (e) {
+                    console.error('benchmark error', e);
+                }
+            }, 1200);
+        });
     </script>
 </body>
 </html>
