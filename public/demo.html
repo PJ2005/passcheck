@@ -2179,14 +2179,14 @@
     </div>
 
     <main>
-        <!-- Ingestion & Reconciliation Source Arithmetic Summary Line -->
+        <!-- Ingestion & Reconciliation Source Summary Line -->
         <div class="sources-summary-bar" id="sources-summary-bar">
             <div class="sources-summary-inner">
                 <div class="summary-prefix">
                     <span class="summary-icon">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                     </span>
-                    <strong class="summary-title">Total records:</strong>
+                    <strong class="summary-title">Data Sources:</strong>
                 </div>
                 <div class="summary-equation">
                     <span class="eq-term">
@@ -2210,11 +2210,12 @@
                         <span class="eq-src">Bank Statement</span>
                     </span>
                     <span class="eq-tag bank-tag">(bank-side)</span>
-                    <span class="eq-op">=</span>
-                    <span class="eq-total-badge">
+                    <span class="eq-divider-slash" style="margin: 0 6px; color: var(--border-strong, #94a3b8); font-weight: 600;">|</span>
+                    <span class="eq-total-badge" title="Count of unique reconciliation records (a matched pair counts once, not twice)">
                         <span class="eq-total-num mono" id="summary-master-total">—</span>
-                        <span class="eq-total-sub">master total</span>
+                        <span class="eq-total-sub">reconciliation records</span>
                     </span>
+                    <span class="summary-note-text" style="font-size: 11.5px; color: var(--muted); margin-left: 2px;">(unique reconciliation records — a matched pair counts once, not twice)</span>
                 </div>
             </div>
         </div>
@@ -2765,17 +2766,26 @@
                     }
                 }
 
-                // Arithmetic master total
-                const masterTotal = (counts['Razorpay'] || 0) +
-                                    (counts['PhonePe'] || 0) +
-                                    (counts['Pine Labs'] || 0) +
-                                    (counts['Bank Statement (Setu AA)'] || 0);
+                // Fetch master total from the actual records endpoint's real total_count field
+                // (GET /api/v1/demo/records/:merchantId?page_size=1, read total_count from the response).
+                // This is the one query that already correctly counts matched_pair + unmatched_vendor + unmatched_bank exactly once each.
+                let masterTotal = 0;
+                try {
+                    const recRes = await fetch(`/api/v1/demo/records/${merchantId}?page_size=1`);
+                    if (recRes.ok) {
+                        const recData = await recRes.json();
+                        masterTotal = recData.total_count || 0;
+                    }
+                } catch (recErr) {
+                    console.warn('failed to fetch records total_count for masterTotal', recErr);
+                }
+
                 window._masterTotal = masterTotal;
 
                 const masterTotalEl = document.getElementById('summary-master-total');
                 if (masterTotalEl) masterTotalEl.textContent = String(masterTotal);
 
-                // Update Full Records tab badge with master total
+                // Update Full Records tab badge with real total_count
                 const recBadge = document.getElementById('records-badge');
                 if (recBadge) recBadge.innerText = `${masterTotal} RECORDS`;
             } catch (e) {
@@ -3460,8 +3470,10 @@
                         // 4. Records count badge
                         const recBadge = document.getElementById('records-badge');
                         if (recBadge) {
-                            const badgeCount = window._masterTotal != null ? window._masterTotal : recData.total_count;
-                            recBadge.innerText = `${badgeCount} RECORDS`;
+                            window._masterTotal = recData.total_count;
+                            const masterTotalEl = document.getElementById('summary-master-total');
+                            if (masterTotalEl) masterTotalEl.textContent = String(recData.total_count);
+                            recBadge.innerText = `${recData.total_count} RECORDS`;
                         }
 
                         updateStepper({
